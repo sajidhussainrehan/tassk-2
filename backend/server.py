@@ -192,10 +192,27 @@ async def create_student(data: StudentCreate):
 
 @api_router.get("/students/{student_id}/profile")
 async def get_student_profile(student_id: str):
+    # Get all students to calculate rank
+    all_students = await db.students.find({}, {"_id": 0}).to_list(1000)
+    all_students.sort(key=lambda x: x.get("points", 0), reverse=True)
+    
+    # Find student
     student = await db.students.find_one({"id": student_id}, {"_id": 0})
     if not student:
         raise HTTPException(status_code=404, detail="غير موجود")
-    return student
+    
+    # Calculate rank (1-based index)
+    rank = None
+    for i, s in enumerate(all_students):
+        if s.get("id") == student_id:
+            rank = i + 1
+            break
+    
+    return {
+        "student": student,
+        "rank": rank,
+        "total_students": len(all_students)
+    }
 
 @api_router.put("/students/{student_id}")
 async def update_student(student_id: str, data: StudentUpdate):

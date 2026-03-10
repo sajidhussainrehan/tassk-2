@@ -51,9 +51,9 @@ function ViewerPage({ token }) {
   if (error) return <div className="min-h-screen flex items-center justify-center text-xl text-red-600">❌ {error}</div>;
 
   const top10 = [...students].sort((a, b) => b.points - a.points).slice(0, 10);
-  const pendingMatches = matches.filter(m => !m.played);
-  const playedMatches = matches.filter(m => m.played);
-  const pendingTasks = tasks.filter(t => !t.completed);
+  const pendingMatches = matches.filter(m => m.status !== "completed");
+  const playedMatches = matches.filter(m => m.status === "completed");
+  const pendingTasks = tasks.filter(t => t.status !== "completed");
   const supervisors = [...new Set(students.map(s => s.supervisor).filter(Boolean))];
   const rankMedals = ["🥇", "🥈", "🥉"];
 
