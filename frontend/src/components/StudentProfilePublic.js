@@ -9,6 +9,8 @@ function StudentProfilePublic() {
   const { studentId } = useParams();
   const [student, setStudent] = useState(null);
   const [rank, setRank] = useState(null);
+  const [groupRank, setGroupRank] = useState(null);
+  const [groupSize, setGroupSize] = useState(0);
   const [totalStudents, setTotalStudents] = useState(0);
   const [leagueStar, setLeagueStar] = useState(null);
   const [challenges, setChallenges] = useState([]);
@@ -33,6 +35,17 @@ function StudentProfilePublic() {
       setLeagueStar(starRes.data);
       setChallenges(challengesRes.data);
       setStandings(standingsRes.data);
+
+      // Fetch all students to calculate group rank
+      const allStudentsRes = await axios.get(`${API}/students`);
+      const allStudents = allStudentsRes.data;
+      const studentGroup = profileRes.data.student.supervisor;
+      if (studentGroup) {
+        const groupStudents = allStudents.filter(s => s.supervisor === studentGroup).sort((a, b) => b.points - a.points);
+        const grpRank = groupStudents.findIndex(s => s.id === studentId) + 1;
+        setGroupRank(grpRank);
+        setGroupSize(groupStudents.length);
+      }
 
       // Fetch tasks for student's group
       const group = profileRes.data.student.supervisor;
@@ -131,15 +144,20 @@ function StudentProfilePublic() {
         )}
 
         {/* 2. Rank & Points */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="bg-white rounded-2xl p-4 text-center shadow-xl border border-green-100">
             <p className="text-2xl">🏆</p>
-            <div className="text-3xl font-bold text-green-600" data-testid="student-rank">{rank}</div>
-            <div className="text-xs text-gray-500">الترتيب من {totalStudents}</div>
+            <div className="text-2xl font-bold text-green-600" data-testid="student-rank">{rank}</div>
+            <div className="text-xs text-gray-500">الترتيب العام من {totalStudents}</div>
+          </div>
+          <div className="bg-white rounded-2xl p-4 text-center shadow-xl border border-orange-100">
+            <p className="text-2xl">🎖️</p>
+            <div className="text-2xl font-bold text-orange-600" data-testid="student-group-rank">{groupRank || '-'}</div>
+            <div className="text-xs text-gray-500">الترتيب في المجموعة من {groupSize}</div>
           </div>
           <div className="bg-white rounded-2xl p-4 text-center shadow-xl border border-blue-100">
             <p className="text-2xl">💎</p>
-            <div className="text-3xl font-bold text-blue-600" data-testid="student-points">{student.points}</div>
+            <div className="text-2xl font-bold text-blue-600" data-testid="student-points">{student.points}</div>
             <div className="text-xs text-gray-500">نقطة</div>
           </div>
         </div>

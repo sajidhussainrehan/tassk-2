@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const BASE_URL = process.env.REACT_APP_BACKEND_URL;
+const FRONTEND_URL = window.location.origin;
 
 function ViewerLinksManager() {
   const [links, setLinks] = useState([]);
@@ -46,7 +46,7 @@ function ViewerLinksManager() {
   };
 
   const copyLink = (linkToken) => {
-    const url = `${BASE_URL}/view/${linkToken}`;
+    const url = `${FRONTEND_URL}/view/${linkToken}`;
     navigator.clipboard.writeText(url);
     setCopiedId(linkToken);
     setTimeout(() => setCopiedId(null), 2000);
@@ -68,7 +68,7 @@ function ViewerLinksManager() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-bold text-gray-800">{link.name}</p>
-                <p className="text-xs text-gray-400 mt-1 font-mono">{BASE_URL}/view/{link.token}</p>
+                <p className="text-xs text-gray-400 mt-1 font-mono">{FRONTEND_URL}/view/{link.token}</p>
               </div>
               <div className="flex gap-2">
                 <button
