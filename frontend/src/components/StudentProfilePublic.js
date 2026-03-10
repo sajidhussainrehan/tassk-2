@@ -69,7 +69,7 @@ function StudentProfilePublic() {
     try {
       const res = await axios.post(`${API}/challenges/${challengeId}/answer/${studentId}`, { answer });
       if (res.data.correct) {
-        showMsg(`إجابة صحيحة! +${res.data.points_earned} نقطة`);
+        showMsg(`إجابة صحيحة! +${res.data.points} نقطة`);
       } else {
         showMsg("إجابة خاطئة");
       }

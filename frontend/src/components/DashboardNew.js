@@ -414,12 +414,22 @@ function Dashboard({ onLogout }) {
           <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()} dir="rtl">
             <h3 className="text-xl font-bold mb-4">رموز QR للطلاب</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {students.map(s => (
-                <div key={s.id} className="text-center border rounded-lg p-3">
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${FRONTEND_URL}/public/${s.id}`)}`} alt="QR" className="mx-auto mb-2" />
-                  <p className="text-sm font-semibold truncate">{s.name}</p>
-                </div>
-              ))}
+              {students.map(s => {
+                const studentLink = `${FRONTEND_URL}/public/${s.id}`;
+                const copyLink = () => {
+                  navigator.clipboard.writeText(studentLink);
+                  showMsg(`تم نسخ رابط ${s.name}`);
+                };
+                return (
+                  <div key={s.id} className="text-center border rounded-lg p-3">
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(studentLink)}`} alt="QR" className="mx-auto mb-2" />
+                    <p className="text-sm font-semibold truncate mb-2">{s.name}</p>
+                    <button onClick={copyLink} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs font-bold">
+                      📋 نسخ الرابط
+                    </button>
+                  </div>
+                );
+              })}
             </div>
             <button onClick={() => setShowQRModal(false)} className="w-full mt-4 bg-gray-500 text-white py-2 rounded-lg font-bold">إغلاق</button>
           </div>

@@ -492,7 +492,17 @@ async def get_league_standings():
             standings[team2]["draws"] += 1
             standings[team2]["points"] += 1
     
-    return sorted(standings.items(), key=lambda x: x[1]["points"], reverse=True)
+    # Convert to list of objects with team property
+    result = []
+    for team_name, stats in standings.items():
+        stats["team"] = team_name
+        stats["played"] = stats.get("wins", 0) + stats.get("draws", 0) + stats.get("losses", 0)
+        stats["gf"] = 0  # Goals for - would need match data
+        stats["ga"] = 0  # Goals against - would need match data
+        stats["gd"] = 0  # Goal difference
+        result.append(stats)
+    
+    return sorted(result, key=lambda x: x["points"], reverse=True)
 
 @api_router.get("/league-star")
 async def get_league_star():
