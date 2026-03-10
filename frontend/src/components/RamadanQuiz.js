@@ -186,7 +186,7 @@ function RamadanQuiz({ studentId, onPointsEarned }) {
         
         {/* Options */}
         <div className="space-y-3">
-          {question.options.map((option, index) => (
+          {(question.options || []).map((option, index) => (
             <button
               key={index}
               onClick={() => setSelectedAnswer(index)}
