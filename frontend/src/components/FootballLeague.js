@@ -74,8 +74,8 @@ function FootballLeague({ supervisors }) {
 
   useEffect(() => { if (message) { const t = setTimeout(() => setMessage(""), 3000); return () => clearTimeout(t); } }, [message]);
 
-  const pendingMatches = matches.filter(m => !m.played);
-  const playedMatches = matches.filter(m => m.played);
+  const pendingMatches = matches.filter(m => m.status !== "completed");
+  const playedMatches = matches.filter(m => m.status === "completed");
 
   return (
     <div className="space-y-4">

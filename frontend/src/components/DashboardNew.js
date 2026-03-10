@@ -20,7 +20,7 @@ const SUPERVISOR_COLORS = [
   { bg: "bg-teal-100", text: "text-teal-700", border: "border-teal-400", gradient: "from-teal-500 to-teal-600" },
 ];
 
-function Dashboard() {
+function Dashboard({ onLogout }) {
   const [students, setStudents] = useState([]);
   const [supervisors, setSupervisors] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -159,7 +159,7 @@ function Dashboard() {
   };
 
   const getColor = (index) => SUPERVISOR_COLORS[index % SUPERVISOR_COLORS.length];
-  const BASE_URL = process.env.REACT_APP_BACKEND_URL;
+  const FRONTEND_URL = window.location.origin;
 
   const sections = [
     { id: "groups", label: "المجموعات", icon: "🏅" },
@@ -182,6 +182,7 @@ function Dashboard() {
             </div>
             <div className="flex gap-2">
               <Link to="/challenges" className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold" data-testid="challenges-link">🏆 المنافسات</Link>
+              <button onClick={onLogout} className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold" data-testid="logout-btn">🚪 خروج</button>
             </div>
           </div>
         </div>
@@ -415,7 +416,7 @@ function Dashboard() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {students.map(s => (
                 <div key={s.id} className="text-center border rounded-lg p-3">
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${BASE_URL}/public/${s.id}`)}`} alt="QR" className="mx-auto mb-2" />
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${FRONTEND_URL}/public/${s.id}`)}`} alt="QR" className="mx-auto mb-2" />
                   <p className="text-sm font-semibold truncate">{s.name}</p>
                 </div>
               ))}

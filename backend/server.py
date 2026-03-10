@@ -26,6 +26,27 @@ api_router = APIRouter(prefix="/api")
 async def home():
     return {"status": "running", "service": "Ghiras Club API"}
 
+# ==================== Authentication ====================
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    token: str
+    username: str
+
+# Simple hardcoded credentials (can be moved to env vars)
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ghiras123")
+
+@api_router.post("/auth/login", response_model=LoginResponse)
+async def login(data: LoginRequest):
+    if data.username == ADMIN_USERNAME and data.password == ADMIN_PASSWORD:
+        token = str(uuid.uuid4())
+        return {"token": token, "username": data.username}
+    raise HTTPException(status_code=401, detail="اسم المستخدم أو كلمة المرور غير صحيحة")
+
 # ==================== Pydantic Models ====================
 
 class Student(BaseModel):
