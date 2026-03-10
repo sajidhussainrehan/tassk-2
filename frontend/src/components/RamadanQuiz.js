@@ -60,7 +60,7 @@ function RamadanQuiz({ studentId, onPointsEarned }) {
       setResult(response.data);
       
       if (response.data.correct && onPointsEarned) {
-        onPointsEarned(response.data.points_earned);
+        onPointsEarned(response.data.points);
       }
     } catch (error) {
       if (error.response?.status === 400) {
@@ -124,7 +124,7 @@ function RamadanQuiz({ studentId, onPointsEarned }) {
           <p className="text-lg font-semibold">لقد اجبت على سؤال اليوم</p>
           <p className="text-green-100 text-sm mt-2">عد غدا للسؤال الجديد ان شاء الله</p>
           <div className="mt-3 bg-white/20 rounded-lg px-4 py-2 inline-block">
-            <span className="text-sm">اجبت على {status.total_answered} من 15 سؤال</span>
+            <span className="text-sm">اجبت على {status?.total_answered || 0} من 15 سؤال</span>
           </div>
         </div>
       </div>
@@ -149,14 +149,14 @@ function RamadanQuiz({ studentId, onPointsEarned }) {
           
           {result.correct && (
             <div className="bg-white/20 rounded-lg px-6 py-3 inline-block mt-2">
-              <span className="text-lg">+{result.points_earned} نقطة</span>
+              <span className="text-lg">+{result.points || 0} نقطة</span>
             </div>
           )}
           
           {!result.correct && (
             <div className="mt-4 bg-white/20 rounded-lg p-3">
               <p className="text-sm mb-1">الاجابة الصحيحة:</p>
-              <p className="font-bold">{question.options[result.correct_answer]}</p>
+              <p className="font-bold">{question.options?.[result.correct_answer] || '-'}</p>
             </div>
           )}
           
