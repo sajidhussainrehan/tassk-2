@@ -94,6 +94,8 @@ class Task(BaseModel):
     status: str = "active"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     claims: List[str] = []
+    claimed_by: Optional[str] = None
+    claimed_by_name: Optional[str] = None
 
 class TaskCreate(BaseModel):
     group: str
@@ -314,6 +316,15 @@ async def get_tasks(group: Optional[str] = Query(None)):
     for t in tasks:
         if isinstance(t.get("created_at"), str):
             t["created_at"] = datetime.fromisoformat(t["created_at"])
+        # Migrate old tasks: populate claimed_by from claims array if missing
+        if not t.get("claimed_by") and t.get("claims"):
+            claims = t["claims"]
+            if len(claims) > 0:
+                last_claimer = claims[-1]
+                t["claimed_by"] = last_claimer
+                # Get student name
+                student = await db.students.find_one({"id": last_claimer})
+                t["claimed_by_name"] = student.get("name", "Unknown") if student else "Unknown"
     return tasks
 
 @api_router.post("/tasks", response_model=Task)
@@ -335,21 +346,22 @@ async def claim_task(task_id: str, student_id: str):
     if not task:
         raise HTTPException(status_code=404, detail="مهمة غير موجودة")
     
-    if student_id not in task.get("claims", []):
-        await db.tasks.update_one({"id": task_id}, {"$push": {"claims": student_id}})
-        
-        # Award points
+    claims = task.get("claims", [])
+    if student_id not in claims:
+        # Get student name for claimed_by_name
         student = await db.students.find_one({"id": student_id})
-        if student:
-            await db.students.update_one({"id": student_id}, {"$inc": {"points": task["points"]}})
-            log_entry = {
-                "id": str(uuid.uuid4()),
-                "student_id": student_id,
-                "points": task["points"],
-                "reason": f"مهمة: {task['description']}",
-                "created_at": datetime.now(timezone.utc).isoformat()
+        student_name = student.get("name", "Unknown") if student else "Unknown"
+        
+        await db.tasks.update_one(
+            {"id": task_id}, 
+            {
+                "$push": {"claims": student_id},
+                "$set": {
+                    "claimed_by": student_id,
+                    "claimed_by_name": student_name
+                }
             }
-            await db.points_log.insert_one(log_entry)
+        )
     
     return {"success": True}
 
