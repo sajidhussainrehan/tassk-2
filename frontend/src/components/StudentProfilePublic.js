@@ -258,12 +258,22 @@ function StudentProfileContent({ setRenderError }) {
             </div>
             <div className="p-4 space-y-3">
               {safeTasks.map(task => (
-                <div key={task.id} className={`p-3 rounded-xl border ${task.claimed_by === studentId ? "border-yellow-400 bg-yellow-50" : "border-blue-200 bg-blue-50"}`}>
-                  <p className="font-semibold text-gray-800 text-sm">{task.claimed_by === studentId ? "🔒" : "📌"} {task.description}</p>
+                <div key={task.id} className={`p-3 rounded-xl border ${
+                  task.status === "completed" ? "border-green-400 bg-green-50" :
+                  task.status === "awaiting_approval" ? "border-orange-400 bg-orange-50" :
+                  task.claimed_by === studentId ? "border-yellow-400 bg-yellow-50" : "border-blue-200 bg-blue-50"
+                }`}>
+                  <p className="font-semibold text-gray-800 text-sm">{
+                    task.status === "completed" ? "✅" :
+                    task.status === "awaiting_approval" ? "⏳" :
+                    task.claimed_by === studentId ? "🔒" : "📌"
+                  } {task.description}</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">💎 {task.points} نقطة</span>
-                    {task.claimed_by === studentId ? (
-                      <span className="text-yellow-600 text-xs font-bold">⏳ في انتظار اعتماد المشرف</span>
+                    {task.status === "awaiting_approval" && task.claimed_by === studentId ? (
+                      <span className="text-orange-600 text-xs font-bold">⏳ بانتظار موافقة المشرف</span>
+                    ) : task.status === "completed" && task.claimed_by === studentId ? (
+                      <span className="text-green-600 text-xs font-bold">✅ تم الاعتماد</span>
                     ) : !task.claimed_by ? (
                       <button onClick={() => claimTask(task.id)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold" data-testid={`claim-task-${task.id}`}>
                         ✋ احجز المهمة
@@ -297,6 +307,11 @@ function StudentProfileContent({ setRenderError }) {
             </div>
           </div>
         )}
+
+        {/* Made with Aboughaith Mark */}
+        <div className="text-center py-6">
+          <p className="text-xs text-gray-400">Made with ❤️ by Aboughaith</p>
+        </div>
       </div>
     </div>
     );

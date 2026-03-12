@@ -337,6 +337,25 @@ async def create_task(data: TaskCreate):
 
 @api_router.post("/tasks/{task_id}/complete")
 async def complete_task(task_id: str):
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="مهمة غير موجودة")
+    
+    # Award points to the student who claimed the task
+    claimed_by = task.get("claimed_by")
+    if claimed_by:
+        student = await db.students.find_one({"id": claimed_by})
+        if student:
+            await db.students.update_one({"id": claimed_by}, {"$inc": {"points": task["points"]}})
+            log_entry = {
+                "id": str(uuid.uuid4()),
+                "student_id": claimed_by,
+                "points": task["points"],
+                "reason": f"مهمة: {task['description']}",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.points_log.insert_one(log_entry)
+    
     await db.tasks.update_one({"id": task_id}, {"$set": {"status": "completed"}})
     return {"success": True}
 
@@ -358,7 +377,8 @@ async def claim_task(task_id: str, student_id: str):
                 "$push": {"claims": student_id},
                 "$set": {
                     "claimed_by": student_id,
-                    "claimed_by_name": student_name
+                    "claimed_by_name": student_name,
+                    "status": "awaiting_approval"
                 }
             }
         )

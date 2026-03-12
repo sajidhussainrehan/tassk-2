@@ -61,7 +61,8 @@ function TasksManager({ supervisors }) {
   const filteredTasks = filter === "all" ? tasks : tasks.filter(t => t.group === filter);
 
   const getStatusBadge = (task) => {
-    if (task.completed) return <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">✅ مكتملة</span>;
+    if (task.status === "completed") return <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">✅ مكتملة</span>;
+    if (task.status === "awaiting_approval") return <span className="bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold">⏳ بانتظار الموافقة</span>;
     if (task.claimed_by) return <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold">🔒 محجوزة</span>;
     return <span className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-bold">📌 متاحة</span>;
   };
@@ -89,7 +90,11 @@ function TasksManager({ supervisors }) {
 
       <div className="space-y-3">
         {filteredTasks.map(task => (
-          <div key={task.id} className={`bg-white rounded-xl shadow p-4 border-r-4 ${task.completed ? "border-green-500 opacity-75" : task.claimed_by ? "border-yellow-500" : "border-blue-500"}`}>
+          <div key={task.id} className={`bg-white rounded-xl shadow p-4 border-r-4 ${
+            task.status === "completed" ? "border-green-500 opacity-75" : 
+            task.status === "awaiting_approval" ? "border-orange-500" : 
+            task.claimed_by ? "border-yellow-500" : "border-blue-500"
+          }`}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -104,7 +109,7 @@ function TasksManager({ supervisors }) {
                 </div>
               </div>
               <div className="flex gap-2">
-                {task.claimed_by && !task.completed && (
+                {task.status === "awaiting_approval" && (
                   <button onClick={() => completeTask(task.id)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-semibold" data-testid={`complete-task-${task.id}`}>
                     ✅ اعتماد
                   </button>
