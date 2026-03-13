@@ -112,9 +112,6 @@ function FootballLeague({ supervisors }) {
                     <th className="p-2">فاز</th>
                     <th className="p-2">تعادل</th>
                     <th className="p-2">خسر</th>
-                    <th className="p-2">له</th>
-                    <th className="p-2">عليه</th>
-                    <th className="p-2">+/-</th>
                     <th className="p-2 font-bold">النقاط</th>
                   </tr>
                 </thead>
@@ -127,9 +124,6 @@ function FootballLeague({ supervisors }) {
                       <td className="p-2 text-center text-green-600">{t.won}</td>
                       <td className="p-2 text-center text-yellow-600">{t.drawn}</td>
                       <td className="p-2 text-center text-red-600">{t.lost}</td>
-                      <td className="p-2 text-center">{t.gf}</td>
-                      <td className="p-2 text-center">{t.ga}</td>
-                      <td className="p-2 text-center">{t.gd > 0 ? '+' : ''}{t.gd}</td>
                       <td className="p-2 text-center font-bold text-green-600 text-lg">{t.points}</td>
                     </tr>
                   ))}

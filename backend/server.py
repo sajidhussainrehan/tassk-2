@@ -36,9 +36,13 @@ class LoginResponse(BaseModel):
     token: str
     username: str
 
+class ViewOnlyLoginRequest(BaseModel):
+    password: str
+
 # Simple hardcoded credentials (can be moved to env vars)
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ghiras123")
+VIEWONLY_PASSWORD = os.environ.get("VIEWONLY_PASSWORD", "view123")
 
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(data: LoginRequest):
@@ -46,6 +50,13 @@ async def login(data: LoginRequest):
         token = str(uuid.uuid4())
         return {"token": token, "username": data.username}
     raise HTTPException(status_code=401, detail="اسم المستخدم أو كلمة المرور غير صحيحة")
+
+@api_router.post("/auth/viewonly-login")
+async def viewonly_login(data: ViewOnlyLoginRequest):
+    if data.password == VIEWONLY_PASSWORD:
+        token = str(uuid.uuid4())
+        return {"token": token, "role": "viewonly"}
+    raise HTTPException(status_code=401, detail="كلمة المرور غير صحيحة")
 
 # ==================== Pydantic Models ====================
 
@@ -172,6 +183,25 @@ class RamadanQuizAnswer(BaseModel):
     question_id: str
     answer: int
     date: str = Field(default_factory=lambda: date.today().isoformat())
+
+class HalaqaGrade(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    student_id: str
+    student_name: str
+    memorization: int = 0
+    revision: int = 0
+    mutun: int = 0
+    notes: str = ""
+    total_points: int = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class HalaqaGradeCreate(BaseModel):
+    student_id: str
+    student_name: str
+    memorization: int = 0
+    revision: int = 0
+    mutun: int = 0
+    notes: str = ""
 
 # ==================== Student Endpoints ====================
 
@@ -656,6 +686,71 @@ async def submit_quiz_answer(data: RamadanQuizAnswer):
             await db.points_log.insert_one(log_entry)
     
     return {"correct": is_correct, "points": question["points"] if is_correct else 0}
+
+# ==================== Halaqa Grades Endpoints ====================
+
+@api_router.get("/halaqa-grades", response_model=List[HalaqaGrade])
+async def get_halaqa_grades():
+    grades = await db.halaqa_grades.find({}, {"_id": 0}).to_list(1000)
+    for g in grades:
+        if isinstance(g.get("created_at"), str):
+            g["created_at"] = datetime.fromisoformat(g["created_at"])
+    return sorted(grades, key=lambda x: x.get("created_at", datetime.now(timezone.utc)), reverse=True)
+
+@api_router.get("/halaqa-grades/{student_id}")
+async def get_student_halaqa_grades(student_id: str):
+    grades = await db.halaqa_grades.find({"student_id": student_id}, {"_id": 0}).to_list(1000)
+    for g in grades:
+        if isinstance(g.get("created_at"), str):
+            g["created_at"] = datetime.fromisoformat(g["created_at"])
+    return sorted(grades, key=lambda x: x.get("created_at", datetime.now(timezone.utc)), reverse=True)
+
+@api_router.post("/halaqa-grades", response_model=HalaqaGrade)
+async def create_halaqa_grade(data: HalaqaGradeCreate):
+    # Calculate total points
+    total_points = data.memorization + data.revision + data.mutun
+    
+    grade = HalaqaGrade(
+        student_id=data.student_id,
+        student_name=data.student_name,
+        memorization=data.memorization,
+        revision=data.revision,
+        mutun=data.mutun,
+        notes=data.notes,
+        total_points=total_points
+    )
+    doc = grade.model_dump()
+    doc["created_at"] = doc["created_at"].isoformat()
+    await db.halaqa_grades.insert_one(doc)
+    
+    # Add points to student
+    student = await db.students.find_one({"id": data.student_id})
+    if student:
+        await db.students.update_one({"id": data.student_id}, {"$inc": {"points": total_points}})
+        log_entry = {
+            "id": str(uuid.uuid4()),
+            "student_id": data.student_id,
+            "points": total_points,
+            "reason": f"حلقة: حفظ({data.memorization}) + مراجعة({data.revision}) + متون({data.mutun})",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.points_log.insert_one(log_entry)
+    
+    return grade
+
+@api_router.delete("/halaqa-grades/{grade_id}")
+async def delete_halaqa_grade(grade_id: str):
+    grade = await db.halaqa_grades.find_one({"id": grade_id})
+    if not grade:
+        raise HTTPException(status_code=404, detail="غير موجود")
+    
+    # Subtract points from student
+    await db.students.update_one({"id": grade["student_id"]}, {"$inc": {"points": -grade["total_points"]}})
+    
+    result = await db.halaqa_grades.delete_one({"id": grade_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="غير موجود")
+    return {"deleted": True}
 
 # ==================== Health Check ====================
 

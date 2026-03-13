@@ -307,11 +307,6 @@ function StudentProfileContent({ setRenderError }) {
             </div>
           </div>
         )}
-
-        {/* Made with Aboughaith Mark */}
-        <div className="text-center py-6">
-          <p className="text-xs text-gray-400">Made with ❤️ by Aboughaith</p>
-        </div>
       </div>
     </div>
     );
@@ -360,6 +355,10 @@ function ChallengeCard({ challenge, onAnswer }) {
       )}
       <div className="text-center mt-1">
         <span className="text-xs text-purple-600 font-bold">{challenge.points} نقطة</span>
+      </div>
+      {/* Footer */}
+      <div className="container mx-auto px-4 py-6 text-center">
+        <p className="text-sm text-gray-400">Made with ❤️ by Aboughaith</p>
       </div>
     </div>
   );

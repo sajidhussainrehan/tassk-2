@@ -75,6 +75,19 @@ function LoginPage({ onLogin }) {
             {loading ? "جاري الدخول..." : "تسجيل الدخول"}
           </button>
         </form>
+
+        {/* View-Only Admin Icon Button */}
+        <div className="mt-6 flex justify-center">
+          <a 
+            href="/viewonly-login" 
+            className="flex flex-col items-center gap-2 group"
+          >
+            <div className="w-16 h-16 bg-blue-100 group-hover:bg-blue-200 rounded-full flex items-center justify-center shadow-lg transition-all">
+              <span className="text-3xl">👁️</span>
+            </div>
+            <span className="text-xs font-medium text-gray-500 group-hover:text-blue-600">وضع المشاهدة فقط</span>
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -465,6 +465,10 @@ function Dashboard({ onLogout }) {
           </div>
         </div>
       )}
+      {/* Footer */}
+      <div className="container mx-auto px-4 py-6 text-center">
+        <p className="text-sm text-gray-400">Made with ❤️ by Aboughaith</p>
+      </div>
     </div>
   );
 }

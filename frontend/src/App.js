@@ -5,17 +5,29 @@ import StudentProfilePublic from "./components/StudentProfilePublic";
 import ChallengesManager from "./components/ChallengesManager";
 import ViewerPage from "./components/ViewerPage";
 import LoginPage from "./components/LoginPage";
+import ViewOnlyLogin from "./components/ViewOnlyLogin";
+import ViewOnlyDashboard from "./components/ViewOnlyDashboard";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("ghiras_token"));
+  const [viewOnlyToken, setViewOnlyToken] = useState(localStorage.getItem("viewonly_token"));
 
   const handleLogin = (newToken) => {
     setToken(newToken);
   };
 
+  const handleViewOnlyLogin = (newToken) => {
+    setViewOnlyToken(newToken);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("ghiras_token");
     setToken(null);
+  };
+
+  const handleViewOnlyLogout = () => {
+    localStorage.removeItem("viewonly_token");
+    setViewOnlyToken(null);
   };
 
   return (
@@ -35,6 +47,14 @@ function App() {
           element={token ? <ChallengesManager /> : <Navigate to="/login" />} 
         />
         <Route path="/view/:viewerToken" element={<ViewerRoute />} />
+        <Route 
+          path="/viewonly" 
+          element={viewOnlyToken ? <ViewOnlyDashboard onLogout={handleViewOnlyLogout} /> : <Navigate to="/viewonly-login" />} 
+        />
+        <Route 
+          path="/viewonly-login" 
+          element={viewOnlyToken ? <Navigate to="/viewonly" /> : <ViewOnlyLogin onLogin={handleViewOnlyLogin} />} 
+        />
         <Route path="*" element={<Navigate to={token ? "/" : "/login"} />} />
       </Routes>
     </BrowserRouter>
