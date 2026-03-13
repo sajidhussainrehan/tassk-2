@@ -121,9 +121,9 @@ function FootballLeague({ supervisors }) {
                       <td className="p-2 text-center">{i === 0 ? "🥇" : i + 1}</td>
                       <td className="p-2 font-semibold">{t.team}</td>
                       <td className="p-2 text-center">{t.played}</td>
-                      <td className="p-2 text-center text-green-600">{t.won}</td>
-                      <td className="p-2 text-center text-yellow-600">{t.drawn}</td>
-                      <td className="p-2 text-center text-red-600">{t.lost}</td>
+                      <td className="px-2 py-3 text-center font-bold text-green-600">{t.wins || 0}</td>
+                      <td className="px-2 py-3 text-center font-bold text-gray-600">{t.draws || 0}</td>
+                      <td className="px-2 py-3 text-center font-bold text-red-600">{t.losses || 0}</td>
                       <td className="p-2 text-center font-bold text-green-600 text-lg">{t.points}</td>
                     </tr>
                   ))}

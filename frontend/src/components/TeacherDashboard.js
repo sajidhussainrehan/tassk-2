@@ -94,7 +94,7 @@ function TeacherDashboard({ onLogout }) {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">📚 لوحة تحكم المعلم</h1>
+              <h1 className="text-2xl font-bold">📚 لوحة تحكم معلم خلقة القرآن</h1>
               <p className="text-emerald-100 text-sm">🎓 تقييم حلقة القرآن</p>
             </div>
             <button onClick={onLogout} className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-semibold">

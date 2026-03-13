@@ -31,7 +31,7 @@ function TeacherLogin({ onLogin }) {
           <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-4xl">📚</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">دخول المعلم</h1>
+          <h1 className="text-2xl font-bold text-gray-800">معلم خلقة القرآن</h1>
           <p className="text-gray-500 mt-2">Teacher Access</p>
         </div>
 
@@ -65,7 +65,7 @@ function TeacherLogin({ onLogin }) {
 
         <div className="mt-6 p-4 bg-emerald-50 rounded-lg">
           <p className="text-sm text-emerald-800 text-center">
-            👨‍🏫 وصول المعلم لإدخال درجات الحلقة
+            👨‍🏫 وصول معلم خلقة القرآن لإدخال الدرجات
           </p>
         </div>
       </div>
