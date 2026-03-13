@@ -7,10 +7,13 @@ import ViewerPage from "./components/ViewerPage";
 import LoginPage from "./components/LoginPage";
 import ViewOnlyLogin from "./components/ViewOnlyLogin";
 import ViewOnlyDashboard from "./components/ViewOnlyDashboard";
+import TeacherLogin from "./components/TeacherLogin";
+import TeacherDashboard from "./components/TeacherDashboard";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("ghiras_token"));
   const [viewOnlyToken, setViewOnlyToken] = useState(localStorage.getItem("viewonly_token"));
+  const [teacherToken, setTeacherToken] = useState(localStorage.getItem("teacher_token"));
 
   const handleLogin = (newToken) => {
     setToken(newToken);
@@ -18,6 +21,10 @@ function App() {
 
   const handleViewOnlyLogin = (newToken) => {
     setViewOnlyToken(newToken);
+  };
+
+  const handleTeacherLogin = (newToken) => {
+    setTeacherToken(newToken);
   };
 
   const handleLogout = () => {
@@ -28,6 +35,11 @@ function App() {
   const handleViewOnlyLogout = () => {
     localStorage.removeItem("viewonly_token");
     setViewOnlyToken(null);
+  };
+
+  const handleTeacherLogout = () => {
+    localStorage.removeItem("teacher_token");
+    setTeacherToken(null);
   };
 
   return (
@@ -54,6 +66,14 @@ function App() {
         <Route 
           path="/viewonly-login" 
           element={viewOnlyToken ? <Navigate to="/viewonly" /> : <ViewOnlyLogin onLogin={handleViewOnlyLogin} />} 
+        />
+        <Route 
+          path="/teacher" 
+          element={teacherToken ? <TeacherDashboard onLogout={handleTeacherLogout} /> : <Navigate to="/teacher-login" />} 
+        />
+        <Route 
+          path="/teacher-login" 
+          element={teacherToken ? <Navigate to="/teacher" /> : <TeacherLogin onLogin={handleTeacherLogin} />} 
         />
         <Route path="*" element={<Navigate to={token ? "/" : "/login"} />} />
       </Routes>

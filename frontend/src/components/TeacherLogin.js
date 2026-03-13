@@ -3,7 +3,7 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-function ViewOnlyLogin({ onLogin }) {
+function TeacherLogin({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,8 +14,8 @@ function ViewOnlyLogin({ onLogin }) {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API}/auth/viewonly-login`, { password });
-      localStorage.setItem("viewonly_token", res.data.token);
+      const res = await axios.post(`${API}/auth/teacher-login`, { password });
+      localStorage.setItem("teacher_token", res.data.token);
       onLogin(res.data.token);
     } catch (err) {
       setError("❌ كلمة المرور غير صحيحة");
@@ -25,14 +25,14 @@ function ViewOnlyLogin({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center p-4" dir="rtl">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-4xl">👁️</span>
+          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-4xl">📚</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">دخول المشاهدة فقط</h1>
-          <p className="text-gray-500 mt-2">View-Only Admin Access</p>
+          <h1 className="text-2xl font-bold text-gray-800">دخول المعلم</h1>
+          <p className="text-gray-500 mt-2">Teacher Access</p>
         </div>
 
         {error && (
@@ -48,7 +48,7 @@ function ViewOnlyLogin({ onLogin }) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-blue-500 text-center"
+              className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-emerald-500 text-center"
               placeholder="أدخل كلمة المرور"
               required
             />
@@ -57,15 +57,15 @@ function ViewOnlyLogin({ onLogin }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold transition disabled:opacity-50"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-bold transition disabled:opacity-50"
           >
             {loading ? "⏳ جاري الدخول..." : "🔓 دخول"}
           </button>
         </form>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-800 text-center">
-            ⚠️ هذا الوصول للمشاهدة فقط - لا يمكن التعديل
+        <div className="mt-6 p-4 bg-emerald-50 rounded-lg">
+          <p className="text-sm text-emerald-800 text-center">
+            👨‍🏫 وصول المعلم لإدخال درجات الحلقة
           </p>
         </div>
       </div>
@@ -83,4 +83,4 @@ function ViewOnlyLogin({ onLogin }) {
   );
 }
 
-export default ViewOnlyLogin;
+export default TeacherLogin;

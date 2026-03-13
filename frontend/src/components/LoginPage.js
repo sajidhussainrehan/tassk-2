@@ -76,16 +76,28 @@ function LoginPage({ onLogin }) {
           </button>
         </form>
 
-        {/* View-Only Admin Icon Button */}
-        <div className="mt-6 flex justify-center">
+        {/* Special Access Icons */}
+        <div className="mt-6 flex justify-center gap-6">
+          {/* View-Only Admin Icon */}
           <a 
             href="/viewonly-login" 
             className="flex flex-col items-center gap-2 group"
           >
-            <div className="w-16 h-16 bg-blue-100 group-hover:bg-blue-200 rounded-full flex items-center justify-center shadow-lg transition-all">
-              <span className="text-3xl">👁️</span>
+            <div className="w-14 h-14 bg-blue-100 group-hover:bg-blue-200 rounded-full flex items-center justify-center shadow-lg transition-all">
+              <span className="text-2xl">👁️</span>
             </div>
-            <span className="text-xs font-medium text-gray-500 group-hover:text-blue-600">وضع المشاهدة فقط</span>
+            <span className="text-xs font-medium text-gray-500 group-hover:text-blue-600">المشاهدة فقط</span>
+          </a>
+
+          {/* Teacher Icon */}
+          <a 
+            href="/teacher-login" 
+            className="flex flex-col items-center gap-2 group"
+          >
+            <div className="w-14 h-14 bg-emerald-100 group-hover:bg-emerald-200 rounded-full flex items-center justify-center shadow-lg transition-all">
+              <span className="text-2xl">📚</span>
+            </div>
+            <span className="text-xs font-medium text-gray-500 group-hover:text-emerald-600">دخول المعلم</span>
           </a>
         </div>
       </div>

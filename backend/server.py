@@ -39,10 +39,14 @@ class LoginResponse(BaseModel):
 class ViewOnlyLoginRequest(BaseModel):
     password: str
 
+class TeacherLoginRequest(BaseModel):
+    password: str
+
 # Simple hardcoded credentials (can be moved to env vars)
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ghiras123")
 VIEWONLY_PASSWORD = os.environ.get("VIEWONLY_PASSWORD", "view123")
+TEACHER_PASSWORD = os.environ.get("TEACHER_PASSWORD", "teacher123")
 
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(data: LoginRequest):
@@ -56,6 +60,13 @@ async def viewonly_login(data: ViewOnlyLoginRequest):
     if data.password == VIEWONLY_PASSWORD:
         token = str(uuid.uuid4())
         return {"token": token, "role": "viewonly"}
+    raise HTTPException(status_code=401, detail="كلمة المرور غير صحيحة")
+
+@api_router.post("/auth/teacher-login")
+async def teacher_login(data: TeacherLoginRequest):
+    if data.password == TEACHER_PASSWORD:
+        token = str(uuid.uuid4())
+        return {"token": token, "role": "teacher"}
     raise HTTPException(status_code=401, detail="كلمة المرور غير صحيحة")
 
 # ==================== Pydantic Models ====================

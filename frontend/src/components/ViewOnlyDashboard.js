@@ -11,23 +11,26 @@ function ViewOnlyDashboard({ onLogout }) {
   const [tasks, setTasks] = useState([]);
   const [matches, setMatches] = useState([]);
   const [standings, setStandings] = useState([]);
+  const [competitions, setCompetitions] = useState([]);
   const [activeTab, setActiveTab] = useState("students");
   const [leagueStar, setLeagueStar] = useState(null);
 
   const fetchData = async () => {
     try {
-      const [studentsRes, tasksRes, matchesRes, standingsRes, starRes] = await Promise.all([
+      const [studentsRes, tasksRes, matchesRes, standingsRes, starRes, competitionsRes] = await Promise.all([
         axios.get(`${API}/students`),
         axios.get(`${API}/tasks`),
         axios.get(`${API}/matches`),
         axios.get(`${API}/league-standings`),
-        axios.get(`${API}/league-star`).catch(() => ({ data: null }))
+        axios.get(`${API}/league-star`).catch(() => ({ data: null })),
+        axios.get(`${API}/competitions`).catch(() => ({ data: [] }))
       ]);
       setStudents(studentsRes.data);
       setTasks(tasksRes.data);
       setMatches(matchesRes.data);
       setStandings(standingsRes.data);
       setLeagueStar(starRes.data);
+      setCompetitions(competitionsRes.data || []);
     } catch (err) {
       console.error(err);
     }
@@ -90,6 +93,7 @@ function ViewOnlyDashboard({ onLogout }) {
             { id: "standings", label: "🏆 الترتيب", icon: "🏆" },
             { id: "tasks", label: "📋 المهام", icon: "📋" },
             { id: "matches", label: "⚽ المباريات", icon: "⚽" },
+            { id: "competitions", label: "🎯 المسابقات", icon: "🎯" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -276,6 +280,66 @@ function ViewOnlyDashboard({ onLogout }) {
           </div>
         )}
 
+        {/* Competitions Tab */}
+        {activeTab === "competitions" && (
+          <div className="bg-white rounded-xl shadow-lg">
+            <div className="bg-blue-600 text-white p-4">
+              <h2 className="font-bold">🎯 المسابقات المتاحة</h2>
+            </div>
+            <div className="p-4 space-y-3">
+              {competitions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-4xl mb-2">🏆</p>
+                  <p>لا توجد مسابقات حالياً</p>
+                </div>
+              ) : (
+                competitions.map((comp) => (
+                  <div 
+                    key={comp.id} 
+                    className={`p-4 rounded-lg border ${
+                      comp.status === "active" ? "bg-green-50 border-green-200" :
+                      comp.status === "completed" ? "bg-gray-50 border-gray-200" :
+                      "bg-yellow-50 border-yellow-200"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-lg">{comp.title}</p>
+                        <p className="text-sm text-gray-600 mt-1">{comp.description}</p>
+                        <div className="flex gap-3 mt-2 text-xs text-gray-500">
+                          <span>📅 {comp.date || "-"}</span>
+                          <span>👥 {comp.participants_count || 0} مشارك</span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold">
+                          💎 {comp.points} نقطة
+                        </span>
+                        <p className={`text-xs mt-1 font-semibold ${
+                          comp.status === "active" ? "text-green-600" :
+                          comp.status === "completed" ? "text-gray-500" :
+                          "text-yellow-600"
+                        }`}>
+                          {comp.status === "active" ? "✅ نشطة" :
+                           comp.status === "completed" ? "✅ منتهية" :
+                           "⏳ قريباً"}
+                        </p>
+                      </div>
+                    </div>
+                    {comp.winner_name && (
+                      <div className="mt-3 p-2 bg-yellow-100 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          🏆 الفائز: <span className="font-bold">{comp.winner_name}</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Student Details Modal */}
         {selectedStudent && (
           <div 
@@ -304,31 +368,49 @@ function ViewOnlyDashboard({ onLogout }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-blue-50 p-3 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-blue-700">{selectedStudent.points}</p>
-                  <p className="text-sm text-gray-600">النقاط</p>
-                </div>
-                <div className="bg-green-50 p-3 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-green-700">
-                    {students.findIndex(s => s.id === selectedStudent.id) + 1}
-                  </p>
-                  <p className="text-sm text-gray-600">الترتيب</p>
+              {/* Points Summary */}
+              <div className="mb-6">
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div className="bg-blue-50 p-3 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-blue-700">{selectedStudent.points}</p>
+                    <p className="text-xs text-gray-600">إجمالي النقاط</p>
+                  </div>
+                  <div className="bg-emerald-50 p-3 rounded-lg text-center border-2 border-emerald-200">
+                    <p className="text-2xl font-bold text-emerald-700">
+                      {halaqaHistory.reduce((sum, g) => sum + (g.total_points || 0), 0)}
+                    </p>
+                    <p className="text-xs text-emerald-600">نقاط القرآن 📚</p>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-green-700">
+                      {students.findIndex(s => s.id === selectedStudent.id) + 1}
+                    </p>
+                    <p className="text-xs text-gray-600">الترتيب</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Halaqa Grades */}
+              {/* Halaqa Grades Details */}
               {halaqaHistory.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="font-bold text-gray-700 mb-2">📚 درجات الحلقة</h3>
+                  <h3 className="font-bold text-emerald-700 mb-2 flex items-center gap-2">
+                    📚 درجات الحلقة (قرآن)
+                  </h3>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {halaqaHistory.map((grade) => (
-                      <div key={grade.id} className="bg-emerald-50 p-3 rounded-lg text-sm">
-                        <p className="font-semibold">
-                          حفظ: {grade.memorization} | مراجعة: {grade.revision} | متون: {grade.mutun}
-                        </p>
-                        <p className="text-xs text-gray-500">المجموع: {grade.total_points} نقطة</p>
-                        {grade.notes && <p className="text-xs text-gray-600 mt-1">📝 {grade.notes}</p>}
+                      <div key={grade.id} className="bg-emerald-50 p-3 rounded-lg text-sm border border-emerald-100">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-semibold text-emerald-800">📖 {grade.student_name}</span>
+                          <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs font-bold">
+                            +{grade.total_points} نقطة
+                          </span>
+                        </div>
+                        <div className="flex gap-3 text-xs text-gray-600">
+                          <span>📝 حفظ: <b>{grade.memorization}</b></span>
+                          <span>🔄 مراجعة: <b>{grade.revision}</b></span>
+                          <span>📜 متون: <b>{grade.mutun}</b></span>
+                        </div>
+                        {grade.notes && <p className="text-xs text-gray-500 mt-1">� {grade.notes}</p>}
                       </div>
                     ))}
                   </div>
@@ -361,6 +443,16 @@ function ViewOnlyDashboard({ onLogout }) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Made with Aboughaith Badge */}
+      <div className="fixed bottom-4 left-4 z-50">
+        <a href="#" className="flex items-center gap-2 bg-black text-white px-3 py-2 rounded-lg shadow-lg hover:bg-gray-800 transition">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          <span className="text-xs font-medium">by Aboughaith</span>
+        </a>
       </div>
     </div>
   );
