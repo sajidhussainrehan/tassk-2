@@ -401,6 +401,17 @@ function ViewOnlyDashboard({ onLogout }) {
                       <div key={grade.id} className="bg-emerald-50 p-3 rounded-lg text-sm border border-emerald-100">
                         <div className="flex justify-between items-center mb-1">
                           <span className="font-semibold text-emerald-800">📖 {grade.student_name}</span>
+                          <span className="font-bold text-emerald-600">{grade.total_points} pts</span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          حفظ: {grade.memorization} | مراجعة: {grade.revision} | متون: {grade.mutun}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          📅 {formatDate(grade.date)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
