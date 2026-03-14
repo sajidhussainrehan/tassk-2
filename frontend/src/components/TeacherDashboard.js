@@ -94,8 +94,8 @@ function TeacherDashboard({ onLogout }) {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">📚 لوحة تحكم معلم خلقة القرآن</h1>
-              <p className="text-emerald-100 text-sm">🎓 تقييم خلقة القرآن</p>
+              <h1 className="text-2xl font-bold">📚 لوحة تحكم معلم حلقة القرآن</h1>
+              <p className="text-emerald-100 text-sm">🎓 تقييم حلقة القرآن</p>
             </div>
             <button onClick={onLogout} className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-semibold">
               🚪 خروج
@@ -134,7 +134,7 @@ function TeacherDashboard({ onLogout }) {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4">
             <h2 className="text-lg font-bold">📋 قائمة الطلاب</h2>
-            <p className="text-emerald-100 text-xs">اختر طالباً لإدخال درجات خلقة</p>
+            <p className="text-emerald-100 text-xs">اختر طالباً لإدخال درجات</p>
           </div>
           <div className="p-4 space-y-3">
             {students.sort((a, b) => b.points - a.points).map((student, index) => (
@@ -189,7 +189,7 @@ function TeacherDashboard({ onLogout }) {
               )}
               <div>
                 <h3 className="text-xl font-bold">{selectedStudent.name}</h3>
-                <p className="text-sm text-gray-500">إدخال درجات خلقة</p>
+                <p className="text-sm text-gray-500">إدخال درجات </p>
               </div>
             </div>
 
