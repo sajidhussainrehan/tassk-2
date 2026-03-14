@@ -192,9 +192,9 @@ function ViewOnlyDashboard({ onLogout }) {
                         <td className="p-3 text-center">{i === 0 ? "🥇" : i + 1}</td>
                         <td className="p-3 font-semibold">{team.team}</td>
                         <td className="p-3 text-center">{team.played}</td>
-                        <td className="p-3 text-center text-green-600">{team.won}</td>
-                        <td className="p-3 text-center text-yellow-600">{team.drawn}</td>
-                        <td className="p-3 text-center text-red-600">{team.lost}</td>
+                        <td className="p-3 text-center text-green-600">{team.wins || 0}</td>
+                        <td className="p-3 text-center text-yellow-600">{team.draws || 0}</td>
+                        <td className="p-3 text-center text-red-600">{team.losses || 0}</td>
                         <td className="p-3 text-center font-bold text-blue-600">{team.points}</td>
                       </tr>
                     ))}
@@ -394,26 +394,13 @@ function ViewOnlyDashboard({ onLogout }) {
               {halaqaHistory.length > 0 && (
                 <div className="mb-4">
                   <h3 className="font-bold text-emerald-700 mb-2 flex items-center gap-2">
-                    📚 درجات الحلقة (قرآن)
+                    📚 درجات خلقة (قرآن)
                   </h3>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {halaqaHistory.map((grade) => (
                       <div key={grade.id} className="bg-emerald-50 p-3 rounded-lg text-sm border border-emerald-100">
                         <div className="flex justify-between items-center mb-1">
                           <span className="font-semibold text-emerald-800">📖 {grade.student_name}</span>
-                          <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs font-bold">
-                            +{grade.total_points} نقطة
-                          </span>
-                        </div>
-                        <div className="flex gap-3 text-xs text-gray-600">
-                          <span>📝 حفظ: <b>{grade.memorization}</b></span>
-                          <span>🔄 مراجعة: <b>{grade.revision}</b></span>
-                          <span>📜 متون: <b>{grade.mutun}</b></span>
-                        </div>
-                        {grade.notes && <p className="text-xs text-gray-500 mt-1">� {grade.notes}</p>}
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
 

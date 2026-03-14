@@ -221,9 +221,9 @@ function StudentProfileContent({ setRenderError }) {
                       <td className="p-2 text-center">{i === 0 ? "🥇" : i + 1}</td>
                       <td className="p-2 font-semibold">{t.team || '-'}</td>
                       <td className="p-2 text-center">{t.played}</td>
-                      <td className="p-2 text-center">{t.won}</td>
-                      <td className="p-2 text-center">{t.drawn}</td>
-                      <td className="p-2 text-center">{t.lost}</td>
+                      <td className="p-2 text-center">{t.wins || 0}</td>
+                      <td className="p-2 text-center">{t.draws || 0}</td>
+                      <td className="p-2 text-center">{t.losses || 0}</td>
                       <td className="p-2 text-center font-bold text-green-600">{t.points}</td>
                     </tr>
                   ))}

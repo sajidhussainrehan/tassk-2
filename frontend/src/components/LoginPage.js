@@ -97,7 +97,7 @@ function LoginPage({ onLogin }) {
             <div className="w-14 h-14 bg-emerald-100 group-hover:bg-emerald-200 rounded-full flex items-center justify-center shadow-lg transition-all">
               <span className="text-2xl">📚</span>
             </div>
-            <span className="text-xs font-medium text-gray-500 group-hover:text-emerald-600">دخول المعلم</span>
+            <span className="text-xs font-medium text-gray-500 group-hover:text-emerald-600">دخول معلم خلقة</span>
           </a>
         </div>
       </div>

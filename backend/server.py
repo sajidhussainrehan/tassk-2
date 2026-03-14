@@ -742,7 +742,7 @@ async def create_halaqa_grade(data: HalaqaGradeCreate):
             "id": str(uuid.uuid4()),
             "student_id": data.student_id,
             "points": total_points,
-            "reason": f"حلقة: حفظ({data.memorization}) + مراجعة({data.revision}) + متون({data.mutun})",
+            "reason": f"خلقة: حفظ({data.memorization}) + مراجعة({data.revision}) + متون({data.mutun})",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.points_log.insert_one(log_entry)

@@ -64,9 +64,7 @@ function TeacherLogin({ onLogin }) {
         </form>
 
         <div className="mt-6 p-4 bg-emerald-50 rounded-lg">
-          <p className="text-sm text-emerald-800 text-center">
-            👨‍🏫 وصول معلم خلقة القرآن لإدخال الدرجات
-          </p>
+          <p className="text-emerald-100 text-sm">👨‍🏫 وصول معلم خلقة لإدخال الدرجات</p>
         </div>
       </div>
 
@@ -76,7 +74,7 @@ function TeacherLogin({ onLogin }) {
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
-          <span className="text-xs font-medium">by Aboughaith</span>
+          <span className="text-xs font-medium text-gray-500 group-hover:text-emerald-600">دخول معلم خلقة</span>
         </a>
       </div>
     </div>
