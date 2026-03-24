@@ -8,6 +8,8 @@ import TasksManager from "./TasksManager";
 import LeagueStarManager from "./LeagueStarManager";
 import ViewerLinksManager from "./ViewerLinksManager";
 import GroupsManager from "./GroupsManager";
+import QuduratManager from "./QuduratManager";
+import AttendanceManager from "./AttendanceManager";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -47,6 +49,7 @@ function Dashboard({ onLogout }) {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editSupervisor, setEditSupervisor] = useState("");
+  const [editTeacher, setEditTeacher] = useState("");
 
   const headers = {};
 
@@ -98,7 +101,12 @@ function Dashboard({ onLogout }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.put(`${API}/students/${editStudent.id}`, { name: editName, phone: editPhone, supervisor: editSupervisor }, { headers });
+      await axios.put(`${API}/students/${editStudent.id}`, { 
+        name: editName, 
+        phone: editPhone, 
+        supervisor: editSupervisor,
+        teacher: editTeacher 
+      }, { headers });
       setEditStudent(null);
       showMsg("تم تحديث بيانات الطالب");
       await fetchStudents();
@@ -149,7 +157,7 @@ function Dashboard({ onLogout }) {
     formData.append("file", file);
     try {
       await axios.post(`${API}/students/${studentId}/upload-image`, formData, {
-        headers: { ...headers, "Content-Type": "multipart/form-data" }
+        headers: { ...headers }
       });
       showMsg("تم رفع الصورة");
       await fetchStudents();
@@ -164,10 +172,12 @@ function Dashboard({ onLogout }) {
   const sections = [
     { id: "groups", label: "المجموعات", icon: "🏅" },
     { id: "students", label: "الطلاب", icon: "👥" },
+    { id: "attendance", label: "الحضور", icon: "📱" },
     { id: "tasks", label: "المهام", icon: "📋" },
     { id: "league", label: "الدوري", icon: "⚽" },
     { id: "star", label: "نجم الدوري", icon: "⭐" },
     { id: "viewers", label: "روابط المشاهدة", icon: "🔗" },
+    { id: "qudurat", label: "القدرات", icon: "🍿" },
   ];
 
   return (
@@ -255,6 +265,15 @@ function Dashboard({ onLogout }) {
               </div>
             </div>
 
+            {/* Teacher Stats (Optional but helpful) */}
+            <div className="flex gap-2 flex-wrap mb-4">
+              <span className="text-sm font-bold text-gray-700">المعلمون النشطون:</span>
+              {[...new Set(students.map(s => s.teacher).filter(Boolean))].map(t => (
+                <span key={t} className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs">{t}</span>
+              ))}
+              {students.filter(s => s.teacher).length === 0 && <span className="text-xs text-gray-400">لا يوجد معلمون محددون</span>}
+            </div>
+
             {/* Students by Group */}
             {supervisors.map((sup, si) => {
               const color = getColor(si);
@@ -295,7 +314,13 @@ function Dashboard({ onLogout }) {
                         {/* Actions */}
                         <div className="flex gap-1">
                           <button onClick={() => setSelectedStudent(student)} className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold" data-testid={`points-btn-${student.id}`}>نقاط</button>
-                          <button onClick={() => { setEditStudent(student); setEditName(student.name); setEditPhone(student.phone || ""); setEditSupervisor(student.supervisor || ""); }}
+                          <button onClick={() => { 
+                            setEditStudent(student); 
+                            setEditName(student.name); 
+                            setEditPhone(student.phone || ""); 
+                            setEditSupervisor(student.supervisor || "");
+                            setEditTeacher(student.teacher || "");
+                          }}
                             className="bg-gray-400 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs" data-testid={`edit-btn-${student.id}`}>تعديل</button>
                           <button onClick={() => deleteStudent(student.id)} className="text-red-400 hover:text-red-600 text-sm" data-testid={`delete-btn-${student.id}`}>&#10005;</button>
                         </div>
@@ -325,6 +350,9 @@ function Dashboard({ onLogout }) {
           </div>
         )}
 
+        {/* ===== Attendance Section ===== */}
+        {activeSection === "attendance" && <AttendanceManager onAttendanceChange={fetchStudents} />}
+
         {/* ===== Tasks Section ===== */}
         {activeSection === "tasks" && <TasksManager supervisors={supervisors} />}
 
@@ -336,6 +364,9 @@ function Dashboard({ onLogout }) {
 
         {/* ===== Viewers Section ===== */}
         {activeSection === "viewers" && <ViewerLinksManager />}
+
+        {/* ===== Qudurat Section ===== */}
+        {activeSection === "qudurat" && <QuduratManager />}
       </div>
 
       {/* ===== Modals ===== */}
@@ -398,6 +429,17 @@ function Dashboard({ onLogout }) {
                   <option value="">بدون مجموعة</option>
                   {supervisors.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">📚 اسم المعلم (القرآن)</label>
+                <input
+                  type="text"
+                  value={editTeacher}
+                  onChange={e => setEditTeacher(e.target.value)}
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-green-500"
+                  placeholder="أدخل اسم المعلم (مثال: معلم القرآن)"
+                />
+                <p className="text-xs text-gray-500 mt-1">💡 اكتب اسم المعلم ليتمكن من الدخول وحفظ الدرجات</p>
               </div>
               <div className="flex gap-3">
                 <button type="submit" disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold disabled:opacity-50">تحديث</button>

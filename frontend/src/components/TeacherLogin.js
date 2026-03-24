@@ -4,9 +4,23 @@ import axios from "axios";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 function TeacherLogin({ onLogin }) {
+  const [teacherId, setTeacherId] = useState("");
+  const [existingTeachers, setExistingTeachers] = useState([]);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const res = await axios.get(`${API}/teachers/list`);
+        setExistingTeachers(res.data);
+      } catch (err) {
+        console.error("Error fetching teachers:", err);
+      }
+    };
+    fetchTeachers();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,8 +29,13 @@ function TeacherLogin({ onLogin }) {
 
     try {
       const res = await axios.post(`${API}/auth/teacher-login`, { password });
-      localStorage.setItem("teacher_token", res.data.token);
-      onLogin(res.data.token);
+      const teacherData = {
+        token: res.data.token,
+        teacherId: teacherId,
+        teacherName: teacherId
+      };
+      localStorage.setItem("teacher_token", JSON.stringify(teacherData));
+      onLogin(teacherData);
     } catch (err) {
       setError("❌ كلمة المرور غير صحيحة");
     } finally {
@@ -42,6 +61,23 @@ function TeacherLogin({ onLogin }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-3">اختر أو أضف معلم</label>
+            <input
+              type="text"
+              list="teachers-list-2"
+              value={teacherId}
+              onChange={(e) => setTeacherId(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-emerald-500 text-center font-bold"
+              placeholder="اختر اسمك أو اكتبه هنا..."
+              required
+            />
+            <datalist id="teachers-list-2">
+              {existingTeachers.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          </div>
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">كلمة المرور</label>
             <input

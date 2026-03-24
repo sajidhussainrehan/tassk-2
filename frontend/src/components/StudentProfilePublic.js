@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import RamadanQuiz from "./RamadanQuiz";
+import QuduratStudent from "./QuduratStudent";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -235,6 +236,9 @@ function StudentProfileContent({ setRenderError }) {
 
         {/* Ramadan Quiz */}
         <RamadanQuiz studentId={studentId} />
+
+        {/* Qudurat (Videos) */}
+        <QuduratStudent studentId={studentId} studentName={student.name} onUpdate={fetchData} />
 
         {/* 3. Challenges */}
         {availableChallenges.length > 0 && (

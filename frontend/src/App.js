@@ -69,7 +69,7 @@ function App() {
         />
         <Route 
           path="/teacher" 
-          element={teacherToken ? <TeacherDashboard onLogout={handleTeacherLogout} /> : <Navigate to="/teacher-login" />} 
+          element={teacherToken ? <TeacherDashboard onLogout={handleTeacherLogout} teacherData={JSON.parse(teacherToken)} /> : <Navigate to="/teacher-login" />} 
         />
         <Route 
           path="/teacher-login" 

@@ -3,7 +3,9 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-function TeacherDashboard({ onLogout }) {
+function TeacherDashboard({ onLogout, teacherData }) {
+  const teacherId = teacherData?.teacherId || "";
+  const teacherName = teacherData?.teacherName || "المعلم";
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showGradeModal, setShowGradeModal] = useState(false);
@@ -18,7 +20,7 @@ function TeacherDashboard({ onLogout }) {
 
   const fetchStudents = async () => {
     try {
-      const res = await axios.get(`${API}/students`);
+      const res = await axios.get(`${API}/students/by-teacher/${teacherId}`);
       setStudents(res.data);
     } catch (err) {
       console.error(err);
@@ -94,7 +96,7 @@ function TeacherDashboard({ onLogout }) {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">📚 لوحة تحكم معلم حلقة القرآن</h1>
+              <h1 className="text-2xl font-bold">📚 حلقة {teacherName}</h1>
               <p className="text-emerald-100 text-sm">🎓 تقييم حلقة القرآن</p>
             </div>
             <button onClick={onLogout} className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-semibold">
