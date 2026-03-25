@@ -10,6 +10,7 @@ import ViewerLinksManager from "./ViewerLinksManager";
 import GroupsManager from "./GroupsManager";
 import QuduratManager from "./QuduratManager";
 import AttendanceManager from "./AttendanceManager";
+import TeacherManagement from "./TeacherManagement";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -33,11 +34,14 @@ function Dashboard({ onLogout }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [leagueStar, setLeagueStar] = useState(null);
+  const [showTeacherManagement, setShowTeacherManagement] = useState(false);
+  const [existingTeachers, setExistingTeachers] = useState([]);
 
   // Add student form
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newSupervisor, setNewSupervisor] = useState("");
+  const [newTeacher, setNewTeacher] = useState("");
 
   // Bulk points
   const [bulkGroup, setBulkGroup] = useState("");
@@ -60,12 +64,14 @@ function Dashboard({ onLogout }) {
 
   const fetchStudents = useCallback(async () => {
     try {
-      const [studentsRes, groupsRes] = await Promise.all([
+      const [studentsRes, groupsRes, teachersRes] = await Promise.all([
         axios.get(`${API}/students`),
-        axios.get(`${API}/groups`)
+        axios.get(`${API}/groups`),
+        axios.get(`${API}/teachers/list`)
       ]);
       setStudents(studentsRes.data);
       setSupervisors(groupsRes.data.map(g => g.name));
+      setExistingTeachers(teachersRes.data);
     } catch {
       showMsg("خطأ في جلب البيانات");
     }
@@ -87,8 +93,13 @@ function Dashboard({ onLogout }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(`${API}/students`, { name: newName, phone: newPhone, supervisor: newSupervisor }, { headers });
-      setNewName(""); setNewPhone(""); setNewSupervisor("");
+      await axios.post(`${API}/students`, { 
+        name: newName, 
+        phone: newPhone, 
+        supervisor: newSupervisor,
+        teacher: newTeacher
+      }, { headers });
+      setNewName(""); setNewPhone(""); setNewSupervisor(""); setNewTeacher("");
       setShowAddStudent(false);
       showMsg("تمت إضافة الطالب بنجاح");
       await fetchStudents();
@@ -242,6 +253,7 @@ function Dashboard({ onLogout }) {
             {/* Action Buttons */}
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => setShowAddStudent(true)} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold" data-testid="add-student-btn">➕ إضافة طالب</button>
+              <button onClick={() => setShowTeacherManagement(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold">👨‍🏫 إدارة المعلمين</button>
               <button onClick={() => setShowQRModal(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold" data-testid="qr-codes-btn">📱 رموز QR</button>
               <button onClick={() => setShowBulkPoints(true)} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-bold" data-testid="bulk-points-btn">💎 نقاط جماعية</button>
             </div>
@@ -398,6 +410,14 @@ function Dashboard({ onLogout }) {
                 </select>
                 {supervisors.length === 0 && <p className="text-xs text-red-500 mt-1">⚠️ أضف مجموعة أولاً من قسم المجموعات</p>}
               </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">المعلم *</label>
+                <select value={newTeacher} onChange={e => setNewTeacher(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-green-500" required>
+                  <option value="">اختر المعلم</option>
+                  {existingTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                {existingTeachers.length === 0 && <p className="text-xs text-amber-500 mt-1">💡 أضف معلمين أولاً من "إدارة المعلمين"</p>}
+              </div>
               <div className="flex gap-3">
                 <button type="submit" disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold disabled:opacity-50" data-testid="submit-add-student">
                   {loading ? "جاري الإضافة..." : "إضافة"}
@@ -432,14 +452,15 @@ function Dashboard({ onLogout }) {
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1">📚 اسم المعلم (القرآن)</label>
-                <input
-                  type="text"
-                  value={editTeacher}
-                  onChange={e => setEditTeacher(e.target.value)}
+                <select 
+                  value={editTeacher} 
+                  onChange={e => setEditTeacher(e.target.value)} 
                   className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-green-500"
-                  placeholder="أدخل اسم المعلم (مثال: معلم القرآن)"
-                />
-                <p className="text-xs text-gray-500 mt-1">💡 اكتب اسم المعلم ليتمكن من الدخول وحفظ الدرجات</p>
+                >
+                  <option value="">اختر المعلم</option>
+                  {existingTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">💡 اختر المعلم ليتمكن من الدخول وحفظ الدرجات</p>
               </div>
               <div className="flex gap-3">
                 <button type="submit" disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold disabled:opacity-50">تحديث</button>
