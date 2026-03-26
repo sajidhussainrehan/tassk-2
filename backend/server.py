@@ -255,6 +255,7 @@ class LeagueStar(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     student_id: str
     student_name: str
+    image_url: Optional[str] = None
     week: int
     reason: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -262,6 +263,7 @@ class LeagueStar(BaseModel):
 class LeagueStarCreate(BaseModel):
     student_id: str
     student_name: str
+    image_url: Optional[str] = None
     reason: str = ""
 
 class PointsLog(BaseModel):
