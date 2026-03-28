@@ -70,8 +70,8 @@ function LeagueStarManager() {
         <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-xl p-5 text-center text-white shadow-lg">
           <div className="text-4xl mb-2">&#9733;</div>
           <h3 className="text-sm opacity-80">نجم الدوري الحالي</h3>
-          {currentStar.image_url ? (
-            <img src={currentStar.image_url} alt="" className="w-20 h-20 rounded-full object-cover border-4 border-white/40 mx-auto mt-2 shadow-lg" />
+          {(currentStar.image_url || currentStar.image) ? (
+            <img src={currentStar.image_url || currentStar.image} alt="" className="w-20 h-20 rounded-full object-cover border-4 border-white/40 mx-auto mt-2 shadow-lg" />
           ) : (
             <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold mx-auto mt-2">{currentStar.student_name?.charAt(0)}</div>
           )}

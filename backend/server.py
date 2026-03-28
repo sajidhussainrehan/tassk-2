@@ -158,9 +158,9 @@ async def delete_teacher(teacher_id: str):
 
 @api_router.get("/teachers/list")
 async def get_teachers_list():
-    """Get list of teachers for dropdowns"""
-    teachers = await db.teachers.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)
-    return teachers
+    """Get list of teacher names for dropdown"""
+    teachers = await db.teachers.find({}, {"_id": 0, "name": 1, "id": 1}).to_list(1000)
+    return [{"id": t.get("id", ""), "name": t.get("name", "Unknown")} for t in teachers]
 
 # ==================== Pydantic Models ====================
 
@@ -264,6 +264,7 @@ class LeagueStarCreate(BaseModel):
     student_id: str
     student_name: str
     image_url: Optional[str] = None
+    image: Optional[str] = None # Support both names
     reason: str = ""
 
 class PointsLog(BaseModel):
@@ -733,11 +734,18 @@ async def get_league_stars():
 @api_router.post("/league-star", response_model=LeagueStar)
 async def set_league_star(data: LeagueStarCreate):
     week = datetime.now(timezone.utc).isocalendar()[1]
-    star = LeagueStar(**data.model_dump(), week=week)
-    doc = star.model_dump()
-    doc["created_at"] = doc["created_at"].isoformat()
-    await db.league_star.insert_one(doc)
-    return star
+    star_id = str(uuid.uuid4())
+    star_doc = {
+        "id": star_id,
+        "student_id": data.student_id,
+        "student_name": data.student_name,
+        "image_url": data.image_url or data.image,
+        "reason": data.reason,
+        "week": week,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.league_star.insert_one(star_doc)
+    return LeagueStar(**star_doc)
 
 @api_router.delete("/league-star/{star_id}")
 async def delete_league_star(star_id: str):

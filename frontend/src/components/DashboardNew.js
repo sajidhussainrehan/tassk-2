@@ -35,7 +35,7 @@ function Dashboard({ onLogout }) {
   const [loading, setLoading] = useState(false);
   const [leagueStar, setLeagueStar] = useState(null);
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
-  const [existingTeachers, setExistingTeachers] = useState([]);
+  const [teachers, setTeachers] = useState([]);
 
   // Add student form
   const [newName, setNewName] = useState("");
@@ -71,7 +71,7 @@ function Dashboard({ onLogout }) {
       ]);
       setStudents(studentsRes.data);
       setSupervisors(groupsRes.data.map(g => g.name));
-      setExistingTeachers(teachersRes.data);
+      setTeachers(teachersRes.data);
     } catch {
       showMsg("خطأ في جلب البيانات");
     }
@@ -414,9 +414,9 @@ function Dashboard({ onLogout }) {
                 <label className="block text-sm font-semibold mb-1">المعلم *</label>
                 <select value={newTeacher} onChange={e => setNewTeacher(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-green-500" required>
                   <option value="">اختر المعلم</option>
-                  {existingTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
-                {existingTeachers.length === 0 && <p className="text-xs text-amber-500 mt-1">💡 أضف معلمين أولاً من "إدارة المعلمين"</p>}
+                {teachers.length === 0 && <p className="text-xs text-red-500 mt-1">⚠️ أضف معلم أولاً من زر "إدارة المعلمين"</p>}
               </div>
               <div className="flex gap-3">
                 <button type="submit" disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold disabled:opacity-50" data-testid="submit-add-student">
