@@ -30,7 +30,7 @@ function QuduratManager() {
     try {
       const [itemsRes, subsRes] = await Promise.all([
         axios.get(`${API}/qudurat`),
-        axios.get(`${API}/qudurat/submissions/pending`)
+        axios.get(`${API}/qudurat/submissions`)
       ]);
       setItems(itemsRes.data);
       setSubmissions(subsRes.data);
@@ -109,6 +109,17 @@ function QuduratManager() {
     }
   };
 
+  const deleteSubmission = async (id) => {
+    if (!window.confirm("هل أنت متأكد من حذف هذا التلخيص؟ سيختفي من القائمة نهائياً.")) return;
+    try {
+      await axios.delete(`${API}/qudurat/submissions/${id}`);
+      showMsg("تم حذف التلخيص");
+      await fetchData();
+    } catch (error) {
+      showMsg("خطأ في الحذف");
+    }
+  };
+
   // Helper to extract YouTube ID
   const getYTId = (url) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -135,9 +146,9 @@ function QuduratManager() {
           }`}
         >
           ✍️ مراجعة التلخيصات
-          {submissions.length > 0 && (
+          {submissions.filter(s => s.status === "pending").length > 0 && (
             <span className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs animate-bounce border-2 border-white">
-              {submissions.length}
+              {submissions.filter(s => s.status === "pending").length}
             </span>
           )}
         </button>
@@ -207,14 +218,25 @@ function QuduratManager() {
             </div>
           ) : (
             submissions.map((sub) => (
-              <div key={sub.id} className="bg-white rounded-2xl p-6 shadow-lg border border-green-100">
+              <div key={sub.id} className={`bg-white rounded-2xl p-6 shadow-lg border border-green-100 relative overflow-hidden ${sub.status !== "pending" ? "opacity-90" : ""}`}>
+                {sub.status !== "pending" && (
+                  <div className={`absolute top-0 right-0 left-0 h-1 ${sub.status === "approved" ? "bg-green-500" : "bg-red-500"}`} />
+                )}
+                
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-xl font-bold">{sub.student_name}</h3>
                     <p className="text-sm text-gray-500">بتاريخ: {new Date(sub.created_at).toLocaleDateString("ar-SA")}</p>
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-bold ${sub.is_correct ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
-                    السؤال: {sub.is_correct ? "صحيح" : "خطأ"}
+                  <div className="flex flex-col items-end gap-2">
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${sub.is_correct ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+                      السؤال: {sub.is_correct ? "صحيح" : "خطأ"}
+                    </div>
+                    {sub.status !== "pending" && (
+                      <div className={`px-3 py-1 rounded-full text-[10px] font-bold border-2 border-green-200 ${sub.status === "approved" ? "bg-green-100 text-green-800" : "bg-red-50 text-red-800"}`}>
+                        تم التقييم: {sub.status === "approved" ? `مقبول (${sub.points_summary_awarded} 💎)` : "مرفوض"}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -222,49 +244,62 @@ function QuduratManager() {
                   {sub.summary}
                 </div>
 
-                <form onSubmit={submitReview} className="flex flex-wrap gap-3 items-center pt-4 border-t border-dashed">
-                  <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs font-bold mb-1 text-gray-500">النقاط المستحقة (كحد أقصى {items.find(it => it.id === sub.qudurat_id)?.points_summary || 0})</label>
-                    <input
-                      type="number"
-                      value={reviewData.submission_id === sub.id ? reviewData.points : 0}
-                      onChange={(e) => setReviewData({ ...reviewData, submission_id: sub.id, points: parseInt(e.target.value) })}
-                      onClick={() => setReviewData({ ...reviewData, submission_id: sub.id })}
-                      className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
-                      placeholder="أدخل عدد النقاط"
-                      required
-                    />
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      type="submit"
-                      disabled={loading || reviewData.submission_id !== sub.id}
-                      onClick={() => setReviewData({...reviewData, submission_id: sub.id, status: "approved"})}
-                      className="bg-green-500 text-white px-6 py-2 rounded-lg font-bold disabled:opacity-50"
-                    >
-                      قبول وإضافة النقاط
-                    </button>
-                    <button
-                      type="button"
-                      disabled={loading || reviewData.submission_id !== sub.id}
-                      onClick={() => {
-                        setReviewData({...reviewData, submission_id: sub.id, status: "rejected", points: 0});
-                        // Submit immediately for rejection
-                        (async () => {
-                          setLoading(true);
-                          try {
-                            await axios.post(`${API}/qudurat/submissions/${sub.id}/review`, { points: 0, status: "rejected" });
-                            showMsg("تم الرفض");
-                            fetchData();
-                          } catch (e) { showMsg("خطأ"); } finally { setLoading(false); }
-                        })();
-                      }}
-                      className="bg-red-500 text-white px-6 py-2 rounded-lg font-bold disabled:opacity-50"
-                    >
-                      رفض
-                    </button>
-                  </div>
-                </form>
+                <div className="flex justify-between items-center pt-4 border-t border-dashed">
+                  {sub.status === "pending" ? (
+                    <form onSubmit={submitReview} className="flex flex-wrap gap-3 items-center w-full">
+                      <div className="flex-1 min-w-[200px]">
+                        <label className="block text-xs font-bold mb-1 text-gray-500">النقاط المستحقة (كحد أقصى {items.find(it => it.id === sub.qudurat_id)?.points_summary || 0})</label>
+                        <input
+                          type="number"
+                          value={reviewData.submission_id === sub.id ? reviewData.points : 0}
+                          onChange={(e) => setReviewData({ ...reviewData, submission_id: sub.id, points: parseInt(e.target.value) })}
+                          onClick={() => setReviewData({ ...reviewData, submission_id: sub.id })}
+                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
+                          placeholder="أدخل عدد النقاط"
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          disabled={loading || reviewData.submission_id !== sub.id}
+                          onClick={() => setReviewData({...reviewData, submission_id: sub.id, status: "approved"})}
+                          className="bg-green-500 text-white px-4 py-2 rounded-lg font-bold disabled:opacity-50 text-sm"
+                        >
+                          قبول
+                        </button>
+                        <button
+                          type="button"
+                          disabled={loading || reviewData.submission_id !== sub.id}
+                          onClick={() => {
+                            setReviewData({...reviewData, submission_id: sub.id, status: "rejected", points: 0});
+                            (async () => {
+                              setLoading(true);
+                              try {
+                                await axios.post(`${API}/qudurat/submissions/${sub.id}/review`, { points: 0, status: "rejected" });
+                                showMsg("تم الرفض");
+                                fetchData();
+                              } catch (e) { showMsg("خطأ"); } finally { setLoading(false); }
+                            })();
+                          }}
+                          className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold disabled:opacity-50 text-sm"
+                        >
+                          رفض
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="flex justify-between w-full items-center">
+                       <span className="text-gray-400 text-sm italic font-medium">✨ هذا التلخيص تمت مراجعته مسبقاً</span>
+                       <button
+                         onClick={() => deleteSubmission(sub.id)}
+                         className="text-red-500 hover:text-red-700 font-bold text-sm bg-red-50 px-3 py-1 rounded-lg border border-red-200"
+                       >
+                         🗑️ حذف للأبد
+                       </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ))
           )}

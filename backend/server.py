@@ -1079,6 +1079,22 @@ async def get_pending_qudurat_submissions():
             s["created_at"] = datetime.fromisoformat(s["created_at"])
     return submissions
 
+@api_router.get("/qudurat/submissions", response_model=List[QuduratSubmission])
+async def get_all_qudurat_submissions():
+    submissions = await db.qudurat_submissions.find({}, {"_id": 0}).to_list(1000)
+    for s in submissions:
+        if isinstance(s.get("created_at"), str):
+            s["created_at"] = datetime.fromisoformat(s["created_at"])
+    # Sort by created_at descending (newest first)
+    return sorted(submissions, key=lambda x: x.get("created_at", datetime.now(timezone.utc)), reverse=True)
+
+@api_router.delete("/qudurat/submissions/{submission_id}")
+async def delete_qudurat_submission(submission_id: str):
+    result = await db.qudurat_submissions.delete_one({"id": submission_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="غير موجود")
+    return {"deleted": True}
+
 @api_router.post("/qudurat/submissions/{submission_id}/review")
 async def review_qudurat_submission(submission_id: str, review: QuduratReview):
     sub = await db.qudurat_submissions.find_one({"id": submission_id})
