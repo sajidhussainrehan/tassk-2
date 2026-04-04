@@ -458,7 +458,7 @@ function Dashboard({ onLogout }) {
                   className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-green-500"
                 >
                   <option value="">اختر المعلم</option>
-                  {existingTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">💡 اختر المعلم ليتمكن من الدخول وحفظ الدرجات</p>
               </div>
@@ -475,8 +475,11 @@ function Dashboard({ onLogout }) {
       {showQRModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowQRModal(false)}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()} dir="rtl">
-            <h3 className="text-xl font-bold mb-4">رموز QR للطلاب</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">رموز QR للطلاب</h3>
+              <button onClick={() => { window.print(); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold print:hidden">🖨️ طباعة</button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4" id="qr-print-area">
               {students.map(s => {
                 const studentLink = `${FRONTEND_URL}/public/${s.id}`;
                 const copyLink = () => {
@@ -484,17 +487,22 @@ function Dashboard({ onLogout }) {
                   showMsg(`تم نسخ رابط ${s.name}`);
                 };
                 return (
-                  <div key={s.id} className="text-center border rounded-lg p-3">
+                  <div key={s.id} className="text-center border-2 border-gray-200 rounded-lg p-3 break-inside-avoid">
                     <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(studentLink)}`} alt="QR" className="mx-auto mb-2" />
-                    <p className="text-sm font-semibold truncate mb-2">{s.name}</p>
-                    <button onClick={copyLink} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs font-bold">
+                    <p className="text-sm font-bold truncate mb-1">{s.name}</p>
+                    {s.barcode && (
+                      <p className="text-lg font-bold text-blue-700 bg-blue-50 rounded-lg py-1 px-2 border border-blue-200 mb-2">
+                        🔢 {s.barcode}
+                      </p>
+                    )}
+                    <button onClick={copyLink} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs font-bold print:hidden">
                       📋 نسخ الرابط
                     </button>
                   </div>
                 );
               })}
             </div>
-            <button onClick={() => setShowQRModal(false)} className="w-full mt-4 bg-gray-500 text-white py-2 rounded-lg font-bold">إغلاق</button>
+            <button onClick={() => setShowQRModal(false)} className="w-full mt-4 bg-gray-500 text-white py-2 rounded-lg font-bold print:hidden">إغلاق</button>
           </div>
         </div>
       )}

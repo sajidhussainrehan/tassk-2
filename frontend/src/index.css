@@ -132,3 +132,26 @@ code {
         border-bottom-color: inherit;
     }
 }
+
+/* Print styles for QR codes */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #qr-print-area, #qr-print-area * {
+    visibility: visible;
+  }
+  #qr-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+    padding: 16px !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+}
