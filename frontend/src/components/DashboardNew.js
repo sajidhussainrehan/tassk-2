@@ -54,7 +54,9 @@ function Dashboard({ onLogout }) {
   const [editPhone, setEditPhone] = useState("");
   const [editSupervisor, setEditSupervisor] = useState("");
   const [editTeacher, setEditTeacher] = useState("");
+  const [editBarcode, setEditBarcode] = useState("");
 
+  const [newBarcode, setNewBarcode] = useState("");
   const headers = {};
 
   const showMsg = (msg) => {
@@ -97,9 +99,10 @@ function Dashboard({ onLogout }) {
         name: newName, 
         phone: newPhone, 
         supervisor: newSupervisor,
-        teacher: newTeacher
+        teacher: newTeacher,
+        barcode: newBarcode
       }, { headers });
-      setNewName(""); setNewPhone(""); setNewSupervisor(""); setNewTeacher("");
+      setNewName(""); setNewPhone(""); setNewSupervisor(""); setNewTeacher(""); setNewBarcode("");
       setShowAddStudent(false);
       showMsg("تمت إضافة الطالب بنجاح");
       await fetchStudents();
@@ -116,7 +119,8 @@ function Dashboard({ onLogout }) {
         name: editName, 
         phone: editPhone, 
         supervisor: editSupervisor,
-        teacher: editTeacher 
+        teacher: editTeacher,
+        barcode: editBarcode
       }, { headers });
       setEditStudent(null);
       showMsg("تم تحديث بيانات الطالب");
@@ -332,6 +336,7 @@ function Dashboard({ onLogout }) {
                             setEditPhone(student.phone || ""); 
                             setEditSupervisor(student.supervisor || "");
                             setEditTeacher(student.teacher || "");
+                            setEditBarcode(student.barcode || "");
                           }}
                             className="bg-gray-400 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs" data-testid={`edit-btn-${student.id}`}>تعديل</button>
                           <button onClick={() => deleteStudent(student.id)} className="text-red-400 hover:text-red-600 text-sm" data-testid={`delete-btn-${student.id}`}>&#10005;</button>
@@ -352,8 +357,20 @@ function Dashboard({ onLogout }) {
                     <div key={student.id} className="flex items-center gap-3 p-2 rounded-lg border border-gray-300 bg-gray-50">
                       <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold">{student.name.charAt(0)}</div>
                       <div className="flex-1"><p className="font-semibold text-sm">{student.name}</p></div>
-                      <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-sm font-bold">{student.points}</span>
-                      <button onClick={() => setSelectedStudent(student)} className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold">نقاط</button>
+                      <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-sm font-bold">{student.points} ⭐</span>
+                      <div className="flex gap-1">
+                        <button onClick={() => setSelectedStudent(student)} className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">نقاط</button>
+                        <button onClick={() => { 
+                          setEditStudent(student); 
+                          setEditName(student.name); 
+                          setEditPhone(student.phone || ""); 
+                          setEditSupervisor(student.supervisor || "");
+                          setEditTeacher(student.teacher || "");
+                          setEditBarcode(student.barcode || "");
+                        }}
+                          className="bg-gray-400 hover:bg-gray-500 text-white px-2 py-1 rounded text-xs">تعديل</button>
+                        <button onClick={() => deleteStudent(student.id)} className="text-red-400 hover:text-red-600 text-sm">&#10005;</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -461,6 +478,17 @@ function Dashboard({ onLogout }) {
                   {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">💡 اختر المعلم ليتمكن من الدخول وحفظ الدرجات</p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">📊 رقم الباركود</label>
+                <input 
+                  type="text" 
+                  value={editBarcode} 
+                  onChange={e => setEditBarcode(e.target.value)} 
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-green-500" 
+                  placeholder="رقم باركود الطالب" 
+                />
+                <p className="text-xs text-gray-500 mt-1">💡 يُستخدم لتسجيل الحضور بمسح الباركود</p>
               </div>
               <div className="flex gap-3">
                 <button type="submit" disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold disabled:opacity-50">تحديث</button>
