@@ -422,19 +422,7 @@ async def update_student(student_id: str, data: StudentUpdate):
         raise HTTPException(status_code=404, detail="غير موجود")
     return {"success": True}
 
-@api_router.post("/students/{student_id}/upload-image")
-async def upload_student_image(student_id: str, file: UploadFile = File(...)):
-    content = await file.read()
-    base64_img = base64.b64encode(content).decode("utf-8")
-    img_data = f"data:{file.content_type};base64,{base64_img}"
-    
-    result = await db.students.update_one(
-        {"id": student_id},
-        {"$set": {"image_url": img_data}}
-    )
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="الطالب غير موجود")
-    return {"image_url": img_data}
+# Removed duplicate upload-image endpoint to fix conflicts
 
 @api_router.delete("/students/{student_id}")
 async def delete_student(student_id: str):
@@ -465,7 +453,15 @@ async def add_points(student_id: str, data: PointsUpdate):
 
 @api_router.put("/students/bulk-points")
 async def bulk_add_points(data: BulkPointsUpdate):
-    students = await db.students.find({"supervisor": data.group}, {"_id": 0}).to_list(1000)
+    # Use regex for case-insensitive and robust matching of group/supervisor
+    import re
+    group_pattern = re.compile(f"^{re.escape(data.group.strip())}$", re.IGNORECASE)
+    
+    students = await db.students.find({"supervisor": group_pattern}, {"_id": 0}).to_list(1000)
+    
+    if len(students) == 0:
+        # Fallback to simple matching if regex finds nothing, just in case
+        students = await db.students.find({"supervisor": data.group}, {"_id": 0}).to_list(1000)
     
     if len(students) == 0:
         raise HTTPException(status_code=404, detail=f"لا يوجد طلاب في المجموعة: {data.group}")
@@ -499,13 +495,26 @@ async def get_student_rankings():
         })
     return rankings
 
+# Single robust upload image endpoint
 @api_router.post("/students/{student_id}/upload-image")
-async def upload_image(student_id: str, file: UploadFile = File(...)):
+async def upload_student_image(student_id: str, file: UploadFile = File(...)):
+    if not file.content_type.startswith("image/"):
+         raise HTTPException(status_code=400, detail="الملف يجب أن يكون صورة")
+         
     content = await file.read()
-    image_base64 = base64.b64encode(content).decode()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="حجم الصورة كبير جداً (الأقصى 5 ميجابايت)")
+        
+    base64_img = base64.b64encode(content).decode("utf-8")
+    img_data = f"data:{file.content_type};base64,{base64_img}"
     
-    await db.students.update_one({"id": student_id}, {"$set": {"image_url": f"data:{file.content_type};base64,{image_base64}"}})
-    return {"success": True}
+    result = await db.students.update_one(
+        {"id": student_id},
+        {"$set": {"image_url": img_data}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="الطالب غير موجود")
+    return {"image_url": img_data, "success": True}
 
 # ==================== Groups Endpoints ====================
 
@@ -724,13 +733,62 @@ async def create_match(data: MatchCreate):
 
 @api_router.put("/matches/{match_id}/score")
 async def set_match_score(match_id: str, data: dict):
-    score1 = data.get("score1")
-    score2 = data.get("score2")
+    score1 = int(data.get("score1", 0))
+    score2 = int(data.get("score2", 0))
     
+    match = await db.matches.find_one({"id": match_id})
+    if not match:
+        raise HTTPException(status_code=404, detail="المباراة غير موجودة")
+        
+    # Update match
     await db.matches.update_one(
         {"id": match_id},
         {"$set": {"score1": score1, "score2": score2, "status": "completed"}}
     )
+    
+    # Award points to students in the groups
+    team1 = match["team1"]
+    team2 = match["team2"]
+    
+    points1 = 0
+    points2 = 0
+    reason1 = ""
+    reason2 = ""
+    
+    if score1 > score2:
+        points1, points2 = 15, 5
+        reason1, reason2 = f"فوز في الدوري ضد {team2}", f"مشاركة في الدوري (خسارة) ضد {team1}"
+    elif score2 > score1:
+        points1, points2 = 5, 15
+        reason1, reason2 = f"مشاركة في الدوري (خسارة) ضد {team2}", f"فوز في الدوري ضد {team1}"
+    else:
+        points1, points2 = 10, 10
+        reason1, reason2 = f"تعادل في الدوري ضد {team2}", f"تعادل في الدوري ضد {team1}"
+
+    # Award points to team1
+    students1 = await db.students.find({"supervisor": team1}).to_list(1000)
+    for s in students1:
+        await db.students.update_one({"id": s["id"]}, {"$inc": {"points": points1}})
+        await db.points_log.insert_one({
+            "id": str(uuid.uuid4()),
+            "student_id": s["id"],
+            "points": points1,
+            "reason": reason1,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+
+    # Award points to team2
+    students2 = await db.students.find({"supervisor": team2}).to_list(1000)
+    for s in students2:
+        await db.students.update_one({"id": s["id"]}, {"$inc": {"points": points2}})
+        await db.points_log.insert_one({
+            "id": str(uuid.uuid4()),
+            "student_id": s["id"],
+            "points": points2,
+            "reason": reason2,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
     return {"success": True}
 
 @api_router.delete("/matches/{match_id}")
@@ -787,6 +845,13 @@ async def get_league_star():
     star = await db.league_star.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
     if not star:
         return {"message": "لا يوجد نجم دوري حتى الآن"}
+    
+    # Try to get the latest student image to keep star photo up to date
+    if star.get("student_id"):
+        student = await db.students.find_one({"id": star["student_id"]}, {"image_url": 1})
+        if student and student.get("image_url"):
+            star["image_url"] = student["image_url"]
+            
     if isinstance(star.get("created_at"), str):
         star["created_at"] = datetime.fromisoformat(star["created_at"])
     return star

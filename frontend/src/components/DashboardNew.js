@@ -16,12 +16,12 @@ import TeacherManagement from "./TeacherManagement";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const SUPERVISOR_COLORS = [
-  { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-400", gradient: "from-blue-500 to-blue-600" },
-  { bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-400", gradient: "from-emerald-500 to-emerald-600" },
-  { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-400", gradient: "from-purple-500 to-purple-600" },
-  { bg: "bg-orange-100", text: "text-orange-700", border: "border-orange-400", gradient: "from-orange-500 to-orange-600" },
-  { bg: "bg-pink-100", text: "text-pink-700", border: "border-pink-400", gradient: "from-pink-500 to-pink-600" },
-  { bg: "bg-teal-100", text: "text-teal-700", border: "border-teal-400", gradient: "from-teal-500 to-teal-600" },
+  { bg: "bg-emerald-50", text: "text-[#006d44]", border: "border-[#006d44]/30", gradient: "from-[#006d44] to-[#014029]" },
+  { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-400/30", gradient: "from-blue-600 to-blue-800" },
+  { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-400/30", gradient: "from-purple-600 to-purple-800" },
+  { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-400/30", gradient: "from-orange-600 to-orange-800" },
+  { bg: "bg-pink-50", text: "text-pink-700", border: "border-pink-400/30", gradient: "from-pink-600 to-pink-800" },
+  { bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-400/30", gradient: "from-teal-600 to-teal-800" },
 ];
 
 function Dashboard({ onLogout }) {
@@ -199,13 +199,6 @@ function Dashboard({ onLogout }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50" dir="rtl">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-emerald-700 text-white py-4 shadow-lg">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">🌱 نادي غِراس</h1>
-              <p className="text-green-100 text-sm">🎯 لوحة تحكم المشرف</p>
             </div>
             <div className="flex gap-2">
               <Link to="/challenges" className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold" data-testid="challenges-link">🏆 المنافسات</Link>

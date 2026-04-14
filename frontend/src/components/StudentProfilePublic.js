@@ -17,7 +17,7 @@ function StudentProfilePublic() {
           <p className="text-sm text-gray-600">{renderError}</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg"
+            className="mt-4 bg-[#006d44] text-white px-4 py-2 rounded-lg"
           >
             إعادة تحميل
           </button>
@@ -33,60 +33,19 @@ function StudentProfileContent({ setRenderError }) {
   const { studentId } = useParams();
   const [student, setStudent] = useState(null);
   const [rank, setRank] = useState(null);
-  const [groupRank, setGroupRank] = useState(null);
-  const [groupSize, setGroupSize] = useState(0);
   const [totalStudents, setTotalStudents] = useState(0);
-  const [leagueStar, setLeagueStar] = useState(null);
-  const [challenges, setChallenges] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [pointsLog, setPointsLog] = useState([]);
-  const [standings, setStandings] = useState([]);
-  const [upcomingMatches, setUpcomingMatches] = useState([]);
-  const [rankings, setRankings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [activeTab, setActiveTab] = useState("home");
 
   const fetchData = useCallback(async () => {
     try {
-      const [profileRes, starRes, challengesRes, standingsRes, upcomingRes, rankingsRes] = await Promise.all([
+      const [profileRes] = await Promise.all([
         axios.get(`${API}/students/${studentId}/profile`),
-        axios.get(`${API}/league-star`),
-        axios.get(`${API}/challenges/active`),
-        axios.get(`${API}/league-standings`),
-        axios.get(`${API}/matches/upcoming`).catch(() => ({ data: [] })),
-        axios.get(`${API}/students/rankings`).catch(() => ({ data: [] }))
       ]);
       setStudent(profileRes.data.student);
       setRank(profileRes.data.rank);
       setTotalStudents(profileRes.data.total_students);
-      setLeagueStar(starRes.data);
-      setChallenges(challengesRes.data);
-      setStandings(standingsRes.data);
-      setUpcomingMatches(Array.isArray(upcomingRes.data) ? upcomingRes.data : []);
-      setRankings(Array.isArray(rankingsRes.data) ? rankingsRes.data : []);
-
-      // Fetch all students to calculate group rank
-      const allStudentsRes = await axios.get(`${API}/students`);
-      const allStudents = allStudentsRes.data;
-      const studentGroup = profileRes.data.student.supervisor;
-      if (studentGroup) {
-        const groupStudents = allStudents.filter(s => s.supervisor === studentGroup).sort((a, b) => b.points - a.points);
-        const grpRank = groupStudents.findIndex(s => s.id === studentId) + 1;
-        setGroupRank(grpRank);
-        setGroupSize(groupStudents.length);
-      }
-
-      // Fetch tasks for student's group
-      const group = profileRes.data.student.supervisor;
-      if (group) {
-        const tasksRes = await axios.get(`${API}/tasks?group=${encodeURIComponent(group)}`);
-        setTasks(tasksRes.data?.filter(t => !t.completed && (!t.claimed_by || t.claimed_by === studentId)) || []);
-      }
-
-      // Fetch points log
-      const logRes = await axios.get(`${API}/points-log/${studentId}`);
-      setPointsLog(logRes.data);
     } catch (err) {
       console.error("StudentProfilePublic fetch error:", err);
       setError("حدث خطأ في جلب البيانات");
@@ -97,344 +56,232 @@ function StudentProfileContent({ setRenderError }) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const showMsg = (msg) => { setMessage(msg); setTimeout(() => setMessage(""), 3000); };
-
-  const claimTask = async (taskId) => {
-    try {
-      await axios.post(`${API}/tasks/${taskId}/claim/${studentId}`);
-      showMsg("تم حجز المهمة بنجاح");
-      await fetchData();
-    } catch (err) {
-      showMsg(err.response?.data?.detail || "خطأ في حجز المهمة");
-    }
-  };
-
-  const answerChallenge = async (challengeId, answer) => {
-    try {
-      const res = await axios.post(`${API}/challenges/${challengeId}/answer/${studentId}`, { answer });
-      if (res.data.correct) {
-        showMsg(`إجابة صحيحة! +${res.data.points} نقطة`);
-      } else {
-        showMsg("إجابة خاطئة");
-      }
-      await fetchData();
-    } catch (err) {
-      showMsg(err.response?.data?.detail || "خطأ");
-    }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return "";
-      return d.toLocaleDateString("ar-SA", { month: "short", day: "numeric" });
-    } catch {
-      return "";
-    }
-  };
-
-  // Wrap render in try-catch
-  try {
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50"><div className="text-xl text-gray-600">⏳ جاري التحميل...</div></div>;
-    if (error || !student) return <div className="min-h-screen flex items-center justify-center bg-red-50"><div className="text-xl text-red-600">❌ {error || "الطالب غير موجود"}</div></div>;
-
-    const answeredChallenges = student.answered_challenges || [];
-    const availableChallenges = Array.isArray(challenges) ? challenges.filter(c => !answeredChallenges.includes(c.id)) : [];
-    const safeStandings = Array.isArray(standings) ? standings : [];
-    const safeTasks = Array.isArray(tasks) ? tasks : [];
-    const safePointsLog = Array.isArray(pointsLog) ? pointsLog : [];
-
-    return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 pb-8" dir="rtl">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-emerald-700 text-white pt-6 pb-16 px-4">
-        <h1 className="text-center text-lg font-bold mb-6">🌱 نادي غِراس</h1>
-        <div className="flex flex-col items-center">
-          {student.image_url ? (
-            <img src={student.image_url} alt="" className="w-24 h-24 rounded-full object-cover border-4 border-white/30 shadow-lg" />
-          ) : (
-            <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-4xl font-bold shadow-lg">{(student.name || '?').charAt(0)}</div>
-          )}
-          <h2 className="text-2xl font-bold mt-3" data-testid="student-name">{student.name}</h2>
-          {student.supervisor && <p className="text-green-100 text-sm mt-1">🏅 {student.supervisor}</p>}
-        </div>
-      </div>
-
-      {/* Message */}
-      {message && (
-        <div className="container mx-auto px-4 -mt-6">
-          <div className="bg-white border-r-4 border-green-500 text-green-700 p-3 rounded-lg shadow text-center font-semibold animate-fadeIn">{message}</div>
-        </div>
-      )}
-
-      <div className="container mx-auto px-4 -mt-10 space-y-4 max-w-lg">
-        {/* 1. League Star */}
-        {leagueStar && !leagueStar.message && (
-          <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl p-4 text-center text-white shadow-xl" data-testid="league-star-banner">
-            <p className="text-3xl">⭐</p>
-            <p className="text-sm opacity-80">نجم الدوري</p>
-            {leagueStar.image_url ? (
-              <img src={leagueStar.image_url} alt="" className="w-16 h-16 rounded-full object-cover border-4 border-white/40 mx-auto mt-1 shadow-lg" />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold mx-auto mt-1">{(leagueStar.student_name || '?').charAt(0)}</div>
-            )}
-            <p className="text-xl font-bold mt-1">{leagueStar.student_name}</p>
-            <p className="text-yellow-100 text-xs">✨ {leagueStar.reason}</p>
-          </div>
-        )}
-
-      {/* 2. Rank & Points */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-2xl p-4 text-center shadow-xl border border-green-100">
-            <p className="text-2xl">🏆</p>
-            <div className="text-2xl font-bold text-green-600" data-testid="student-rank">{rank || '-'}</div>
-            <div className="text-xs text-gray-500">الترتيب العام من {totalStudents || 0}</div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 text-center shadow-xl border border-orange-100">
-            <p className="text-2xl">🎖️</p>
-            <div className="text-2xl font-bold text-orange-600" data-testid="student-group-rank">{groupRank || '-'}</div>
-            <div className="text-xs text-gray-500">الترتيب في المجموعة من {groupSize || 0}</div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 text-center shadow-xl border border-blue-100">
-            <p className="text-2xl">💎</p>
-            <div className="text-2xl font-bold text-blue-600" data-testid="student-points">{student?.points || 0}</div>
-            <div className="text-xs text-gray-500">نقطة</div>
-          </div>
-        </div>
-
-        {/* League Standings */}
-        {safeStandings.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-green-100">
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-3">
-              <h3 className="font-bold text-center text-sm">⚽ جدول الدوري الكروي</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="p-2">#</th>
-                    <th className="p-2 text-right">الفريق</th>
-                    <th className="p-2">لعب</th>
-                    <th className="p-2">فاز</th>
-                    <th className="p-2">تعادل</th>
-                    <th className="p-2">خسر</th>
-                    <th className="p-2 font-bold">النقاط</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {safeStandings.map((t, i) => (
-                    <tr key={t.team || i} className={`${t.team && t.team === student.supervisor ? "bg-green-50 font-bold" : i % 2 === 0 ? "bg-gray-50" : ""}`}>
-                      <td className="p-2 text-center">{i === 0 ? "🥇" : i + 1}</td>
-                      <td className="p-2 font-semibold">{t.team || '-'}</td>
-                      <td className="p-2 text-center">{t.played}</td>
-                      <td className="p-2 text-center">{t.wins || 0}</td>
-                      <td className="p-2 text-center">{t.draws || 0}</td>
-                      <td className="p-2 text-center">{t.losses || 0}</td>
-                      <td className="p-2 text-center font-bold text-green-600">{t.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* League Page Link */}
-        <Link to="/league" className="block bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-2xl p-4 text-center font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02]">
-          ⚽ عرض صفحة الدوري الكاملة
-        </Link>
-
-        {/* Upcoming Matches */}
-        {upcomingMatches.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-orange-100">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-3">
-              <h3 className="font-bold text-center text-sm">⚽ المباريات القادمة</h3>
-            </div>
-            <div className="p-4 space-y-3">
-              {upcomingMatches.map((match, i) => (
-                <div key={match.id || i} className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-gray-50 to-orange-50 border border-orange-200">
-                  <div className="flex-1 text-center">
-                    <span className="font-bold text-gray-800 text-sm">{match.team1}</span>
-                  </div>
-                  <div className="px-4 py-1 bg-orange-100 rounded-full text-orange-700 font-bold text-xs">
-                    VS
-                  </div>
-                  <div className="flex-1 text-center">
-                    <span className="font-bold text-gray-800 text-sm">{match.team2}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Full Rankings Leaderboard */}
-        {rankings.length > 0 && (
-          <div className="bg-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-700">
-            <div className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white p-3">
-              <h3 className="font-bold text-center text-sm">🏆 ترتيب الفانتازي - جميع الطلاب</h3>
-            </div>
-            <div className="max-h-80 overflow-y-auto">
-              {rankings.map((r) => (
-                <div
-                  key={r.id}
-                  className={`flex items-center gap-3 px-4 py-3 border-b border-gray-800 ${
-                    r.id === studentId ? "bg-yellow-900/30 border-l-4 border-l-yellow-500" : ""
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                    r.rank === 1 ? "bg-yellow-500 text-black" :
-                    r.rank === 2 ? "bg-gray-400 text-black" :
-                    r.rank === 3 ? "bg-amber-700 text-white" :
-                    "bg-gray-700 text-gray-300"
-                  }`}>
-                    {r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold truncate ${r.id === studentId ? "text-yellow-400" : "text-gray-200"}`}>{r.name}</p>
-                    <p className="text-xs text-gray-500">{r.supervisor}</p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    r.id === studentId ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400"
-                  }`}>
-                    {r.points} ⭐
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Ramadan Quiz */}
-        <RamadanQuiz studentId={studentId} />
-
-        {/* Qudurat (Videos) */}
-        <QuduratStudent studentId={studentId} studentName={student.name} onUpdate={fetchData} />
-
-        {/* 3. Challenges */}
-        {availableChallenges.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-purple-100">
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3">
-              <h3 className="font-bold text-center text-sm">🏆 المنافسات المتاحة</h3>
-            </div>
-            <div className="p-4 space-y-4">
-              {availableChallenges.map(c => (
-                <ChallengeCard key={c.id} challenge={c} onAnswer={(ans) => answerChallenge(c.id, ans)} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 4. Weekly Tasks */}
-        {safeTasks.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-100">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-3">
-              <h3 className="font-bold text-center text-sm">📋 المهام الأسبوعية</h3>
-            </div>
-            <div className="p-4 space-y-3">
-              {safeTasks.map(task => (
-                <div key={task.id} className={`p-3 rounded-xl border ${
-                  task.status === "completed" ? "border-green-400 bg-green-50" :
-                  task.status === "awaiting_approval" ? "border-orange-400 bg-orange-50" :
-                  task.claimed_by === studentId ? "border-yellow-400 bg-yellow-50" : "border-blue-200 bg-blue-50"
-                }`}>
-                  <p className="font-semibold text-gray-800 text-sm">{
-                    task.status === "completed" ? "✅" :
-                    task.status === "awaiting_approval" ? "⏳" :
-                    task.claimed_by === studentId ? "🔒" : "📌"
-                  } {task.description}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">💎 {task.points} نقطة</span>
-                    {task.status === "awaiting_approval" && task.claimed_by === studentId ? (
-                      <span className="text-orange-600 text-xs font-bold">⏳ بانتظار موافقة المشرف</span>
-                    ) : task.status === "completed" && task.claimed_by === studentId ? (
-                      <span className="text-green-600 text-xs font-bold">✅ تم الاعتماد</span>
-                    ) : !task.claimed_by ? (
-                      <button onClick={() => claimTask(task.id)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold" data-testid={`claim-task-${task.id}`}>
-                        ✋ احجز المهمة
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 5. Points Log */}
-        {safePointsLog.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-            <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white p-3">
-              <h3 className="font-bold text-center text-sm">📊 سجل النقاط</h3>
-            </div>
-            <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-              {safePointsLog.map((log, i) => (
-                <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{((log.points || 0) > 0 ? "✅" : "❌") + " " + (log.reason || "")}</p>
-                    <p className="text-xs text-gray-400">📅 {formatDate(log.created_at)}</p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${log.points > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {log.points > 0 ? "+" : ""}{log.points || 0}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="flex flex-col items-center">
+        <div className="w-12 h-12 border-4 border-[#006d44] border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-[#006d44] font-bold">جاري التحميل...</p>
       </div>
     </div>
-    );
-  } catch (err) {
-    console.error("Render error:", err);
-    setRenderError(err.message || "Unknown error");
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50" dir="rtl">
-        <div className="text-center p-6">
-          <p className="text-xl text-red-600 mb-4">❌ خطأ في عرض الصفحة</p>
-          <p className="text-sm text-gray-600">{err.message || "خطأ غير معروف"}</p>
-        </div>
-      </div>
-    );
-  }
-}
+  );
 
-function ChallengeCard({ challenge, onAnswer }) {
-  const [selected, setSelected] = useState(null);
-  const [answered, setAnswered] = useState(false);
-
-  const handleAnswer = () => {
-    if (selected === null) return;
-    setAnswered(true);
-    onAnswer(selected);
-  };
+  if (error || !student) return (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <p className="text-red-600 font-bold">{error || "الطالب غير موجود"}</p>
+    </div>
+  );
 
   return (
-    <div className="border rounded-lg p-3">
-      <p className="font-bold text-sm mb-2">{challenge.question}</p>
-      <div className="space-y-2">
-        {challenge.options.map((opt, i) => (
-          <button key={i} onClick={() => !answered && setSelected(i)}
-            className={`w-full text-right p-2 rounded-lg text-sm border transition ${selected === i ? "border-purple-500 bg-purple-50" : "border-gray-200 hover:bg-gray-50"} ${answered ? "opacity-75 cursor-not-allowed" : ""}`}
-            disabled={answered}
-          >
-            {opt}
-          </button>
-        ))}
+    <div className="min-h-screen bg-[#f8fbfa] pb-24" dir="rtl">
+      {/* Header matching Image 4 */}
+      <div className="relative bg-[#f8fbfa] pt-6 px-6 overflow-hidden">
+        {/* Decorative background elements (Ramadan/Islamic theme from image) */}
+        <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+            <svg width="200" height="200" viewBox="0 0 200 200">
+                <circle cx="180" cy="20" r="100" fill="#006d44" />
+            </svg>
+        </div>
+
+        <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-full border-2 border-white shadow-md overflow-hidden bg-white">
+                    {student.image_url ? (
+                        <img src={student.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xl font-bold">
+                            {(student.name || '?').charAt(0)}
+                        </div>
+                    )}
+                </div>
+                <div>
+                    <h2 className="text-sm font-bold text-gray-500">رمضان مبارك</h2>
+                    <h1 className="text-lg font-black text-[#006d44]">{student.name}</h1>
+                    <p className="text-[10px] text-gray-400 font-bold">انطلق اليوم لإنجاز جديد</p>
+                </div>
+            </div>
+            <div className="flex gap-2">
+                <button className="bg-[#006d44] text-white p-2 rounded-full shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+                <button className="bg-[#006d44] text-white p-2 rounded-full shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        {/* Main Points Card (Image 4) */}
+        <div className="bg-white rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.05)] text-center relative mb-8 border border-gray-100">
+            <div className="absolute top-8 right-8">
+                <div className="bg-[#f8fbfa] border-2 border-yellow-400 px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                    <span className="text-yellow-500 text-sm font-black">#{rank || '-'}</span>
+                    <span className="bg-yellow-400 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]">🏆</span>
+                </div>
+            </div>
+            
+            <div className="mb-4">
+                <div className="text-7xl font-black text-gray-900 leading-none">{student.points || 0}</div>
+                <div className="text-gray-400 font-bold mt-2 tracking-widest text-lg">نقطة</div>
+            </div>
+
+            <div className="w-full bg-gray-100 h-2.5 rounded-full mb-3 overflow-hidden">
+                <div 
+                    className="bg-[#006d44] h-full rounded-full transition-all duration-1000" 
+                    style={{ width: `${Math.min(((student.points || 0) / 10000) * 100, 100)}%` }}
+                ></div>
+            </div>
+            <p className="text-[10px] text-gray-400 font-bold italic">
+                {Math.floor(((student.points || 0) / 10000) * 100)}% - باقي {10000 - (student.points || 0)} نقطة للترتيب التالي
+            </p>
+        </div>
+
+        {/* Ramadan Banner (Image 4 center) */}
+        <div className="bg-gradient-to-r from-[#006d44] to-[#014029] rounded-3xl p-6 text-white flex items-center justify-between mb-8 shadow-xl relative overflow-hidden group h-32">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
+            <div className="relative z-10">
+                <h3 className="text-2xl font-black mb-1">شهر رمضان المبارك</h3>
+                <p className="text-xs opacity-80">شهر الخير والبركات</p>
+            </div>
+            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-all border border-white/20">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+            </div>
+        </div>
+
+        {/* Skills Section (Matching Image 1) */}
+        <div className="mb-10 animate-fadeIn">
+            <div className="flex items-center gap-2 mb-6">
+                <div className="w-1.5 h-6 bg-[#006d44] rounded-full"></div>
+                <h2 className="text-xl font-black text-gray-800">المهارات</h2>
+            </div>
+            
+            <div className="bg-[#004e31] rounded-[2.5rem] p-8 text-white text-center mb-6 relative overflow-hidden shadow-2xl">
+                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+                <div className="relative z-10">
+                    <div className="text-6xl font-black mb-2">80%</div>
+                    <div className="text-sm opacity-80 font-bold mb-6 italic uppercase tracking-widest">المستوى العام</div>
+                    <div className="inline-block bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 text-xs font-bold">بناءً على 6 مهارات</div>
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                {[
+                    { label: "المعرفة", value: 75, color: "#7e22ce", icon: "📖" },
+                    { label: "المستثمر", value: 100, color: "#059669", icon: "📈" },
+                    { label: "التعاون", value: 50, color: "#d97706", icon: "👥" },
+                    { label: "الانضباط", value: 91, color: "#0891b2", icon: "📅" },
+                    { label: "ضبط النفس", value: 85, color: "#dc2626", icon: "🛡️" },
+                ].map((skill, idx) => (
+                    <div key={idx} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-50 flex items-center justify-between group hover:shadow-md transition-all">
+                        <div className="flex items-center gap-4 flex-1">
+                            <div className="text-gray-400">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="font-black text-[15px] text-gray-800">{skill.label}</span>
+                                    <span className="font-black text-sm" style={{ color: skill.color }}>{skill.value}%</span>
+                                </div>
+                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full rounded-full transition-all duration-1000 delay-300" 
+                                        style={{ width: `${skill.value}%`, backgroundColor: skill.color }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ml-4 opacity-10`} style={{ backgroundColor: skill.color }}></div>
+                        <div className="absolute left-6 text-xl opacity-20 group-hover:opacity-40 transition-opacity">{skill.icon}</div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Hint Box (Image 1 bottom) */}
+            <div className="bg-[#f0f9f1] border border-[#006d44]/10 rounded-3xl p-6 mt-6 flex items-start gap-4 shadow-inner">
+                <span className="text-2xl">💡</span>
+                <div>
+                    <h4 className="font-black text-[#006d44] mb-1">نصائح لتحسين مهاراتك</h4>
+                    <p className="text-xs text-gray-500 font-bold leading-relaxed">ساعد مجموعتك للفوز في المسابقات ليرتفع مستواك في التعاون والانضباط.</p>
+                </div>
+            </div>
+        </div>
+
+        {/* Services Section (Matching Image 3) */}
+        <div className="mb-8">
+            <div className="flex items-center gap-2 mb-6">
+                <div className="w-1.5 h-6 bg-[#006d44] rounded-full"></div>
+                <h2 className="text-xl font-black text-gray-800">الخدمات</h2>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+                {[
+                    { label: "مقاطع الفيديو", icon: "📹", color: "bg-purple-100 text-purple-600", active: true },
+                    { label: "الاستثمارات", icon: "📈", color: "bg-blue-100 text-blue-600", active: true },
+                    { label: "المبادرات", icon: "🚩", color: "bg-emerald-100 text-emerald-600", active: true },
+                    { label: "الحلقة", icon: "✅", color: "bg-orange-100 text-orange-600", active: true },
+                    { label: "المسابقات", icon: "🏆", color: "bg-red-100 text-red-600", active: true },
+                    { label: "الحضور", icon: "📅", color: "bg-sky-100 text-sky-600", active: true },
+                    { label: "كشف الحساب", icon: "📄", color: "bg-rose-100 text-rose-600", active: true },
+                    { label: "الترتيب", icon: "📊", color: "bg-teal-100 text-teal-600", active: true, link: "/league" },
+                    { label: "الكتب", icon: "📚", color: "bg-indigo-100 text-indigo-600", active: true },
+                ].map((s, idx) => (
+                    s.link ? (
+                        <Link to={s.link} key={idx} className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center gap-2 hover:shadow-md transition-all active:scale-95 group">
+                            <div className={`w-14 h-14 rounded-2xl ${s.color} flex items-center justify-center text-2xl group-hover:scale-110 transition-transform`}>{s.icon}</div>
+                            <span className="text-[10px] font-black text-gray-600">{s.label}</span>
+                        </Link>
+                    ) : (
+                        <button key={idx} className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center gap-2 hover:shadow-md transition-all active:scale-95 group">
+                            <div className={`w-14 h-14 rounded-2xl ${s.color} flex items-center justify-center text-2xl group-hover:scale-110 transition-transform`}>{s.icon}</div>
+                            <span className="text-[10px] font-black text-gray-600">{s.label}</span>
+                        </button>
+                    )
+                ))}
+            </div>
+        </div>
+
+        {/* Qudurat & Quiz as sub-sections if needed */}
+        <div className="space-y-6">
+            <RamadanQuiz studentId={studentId} onPointsUpdate={fetchData} />
+            <QuduratStudent studentId={studentId} />
+        </div>
       </div>
-      {!answered && (
-        <button onClick={handleAnswer} disabled={selected === null}
-          className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm font-bold disabled:opacity-50">
-          تأكيد الإجابة
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-8 py-3 flex justify-between items-center z-50">
+        <button className="flex flex-col items-center gap-1 text-[#006d44]">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+            </svg>
+            <span className="text-[10px] font-bold">الرئيسية</span>
         </button>
-      )}
-      <div className="text-center mt-1">
-        <span className="text-xs text-purple-600 font-bold">{challenge.points} نقطة</span>
-      </div>
-      {/* Footer */}
-      <div className="container mx-auto px-4 py-6 text-center">
-        <p className="text-sm text-gray-400">Made with ❤️ by Aboughaith</p>
+        <button className="flex flex-col items-center gap-1 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-[10px] font-bold">التنبيهات</span>
+        </button>
+        <div className="bg-[#006d44] w-12 h-12 rounded-2xl flex items-center justify-center -mt-10 shadow-lg shadow-emerald-200 text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+        </div>
+        <button className="flex flex-col items-center gap-1 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span className="text-[10px] font-bold">المهام</span>
+        </button>
+        <Link to="/league" className="flex flex-col items-center gap-1 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            <span className="text-[10px] font-bold">الترتيب</span>
+        </Link>
       </div>
     </div>
   );
