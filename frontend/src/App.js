@@ -9,6 +9,7 @@ import ViewOnlyLogin from "./components/ViewOnlyLogin";
 import ViewOnlyDashboard from "./components/ViewOnlyDashboard";
 import TeacherLogin from "./components/TeacherLogin";
 import TeacherDashboard from "./components/TeacherDashboard";
+import SportsLeaguePage from "./components/SportsLeaguePage";
 import GlobalLoader from "./components/GlobalLoader";
 
 function App() {
@@ -56,6 +57,7 @@ function App() {
           element={token ? <Navigate to="/" /> : <LoginPage onLogin={handleLogin} />} 
         />
         <Route path="/public/:studentId" element={<StudentProfilePublic />} />
+        <Route path="/league" element={<SportsLeaguePage />} />
         <Route 
           path="/challenges" 
           element={token ? <ChallengesManager /> : <Navigate to="/login" />} 

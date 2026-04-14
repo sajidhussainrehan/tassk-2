@@ -67,10 +67,10 @@ class TeacherUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
 
-# Simple hardcoded credentials (can be moved to env vars)
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ghiras123")
-VIEWONLY_PASSWORD = os.environ.get("VIEWONLY_PASSWORD", "view123")
+# Authentication credentials from environment variables
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+VIEWONLY_PASSWORD = os.environ.get("VIEWONLY_PASSWORD")
 
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(data: LoginRequest):
@@ -182,6 +182,8 @@ class StudentCreate(BaseModel):
     supervisor: Optional[str] = None
     teacher: Optional[str] = None
     barcode: Optional[str] = None
+    image_url: Optional[str] = None
+    image: Optional[str] = None
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
@@ -230,6 +232,8 @@ class Challenge(BaseModel):
     correct_answer: int
     points: int = 10
     is_active: bool = True
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ChallengeCreate(BaseModel):
@@ -237,6 +241,8 @@ class ChallengeCreate(BaseModel):
     options: List[str]
     correct_answer: int
     points: int = 10
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
 
 class Match(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -245,11 +251,25 @@ class Match(BaseModel):
     score1: Optional[int] = None
     score2: Optional[int] = None
     status: str = "scheduled"
+    match_date: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class MatchCreate(BaseModel):
     team1: str
     team2: str
+    match_date: Optional[str] = None
+
+class Team(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    group_photo: Optional[str] = None
+    lineup: List[dict] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TeamCreate(BaseModel):
+    name: str
+    group_photo: Optional[str] = None
+    lineup: List[dict] = []
 
 class LeagueStar(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -402,6 +422,20 @@ async def update_student(student_id: str, data: StudentUpdate):
         raise HTTPException(status_code=404, detail="غير موجود")
     return {"success": True}
 
+@api_router.post("/students/{student_id}/upload-image")
+async def upload_student_image(student_id: str, file: UploadFile = File(...)):
+    content = await file.read()
+    base64_img = base64.b64encode(content).decode("utf-8")
+    img_data = f"data:{file.content_type};base64,{base64_img}"
+    
+    result = await db.students.update_one(
+        {"id": student_id},
+        {"$set": {"image_url": img_data}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="الطالب غير موجود")
+    return {"image_url": img_data}
+
 @api_router.delete("/students/{student_id}")
 async def delete_student(student_id: str):
     result = await db.students.delete_one({"id": student_id})
@@ -433,6 +467,9 @@ async def add_points(student_id: str, data: PointsUpdate):
 async def bulk_add_points(data: BulkPointsUpdate):
     students = await db.students.find({"supervisor": data.group}, {"_id": 0}).to_list(1000)
     
+    if len(students) == 0:
+        raise HTTPException(status_code=404, detail=f"لا يوجد طلاب في المجموعة: {data.group}")
+    
     for student in students:
         await db.students.update_one({"id": student["id"]}, {"$inc": {"points": data.points}})
         log_entry = {
@@ -445,6 +482,22 @@ async def bulk_add_points(data: BulkPointsUpdate):
         await db.points_log.insert_one(log_entry)
     
     return {"success": True, "count": len(students)}
+
+@api_router.get("/students/rankings")
+async def get_student_rankings():
+    """Get all students ranked by points (no image data for performance)"""
+    students = await db.students.find({}, {"_id": 0, "image_url": 0}).to_list(1000)
+    students.sort(key=lambda x: x.get("points", 0), reverse=True)
+    rankings = []
+    for i, s in enumerate(students):
+        rankings.append({
+            "rank": i + 1,
+            "id": s.get("id"),
+            "name": s.get("name"),
+            "points": s.get("points", 0),
+            "supervisor": s.get("supervisor", "")
+        })
+    return rankings
 
 @api_router.post("/students/{student_id}/upload-image")
 async def upload_image(student_id: str, file: UploadFile = File(...)):
@@ -582,10 +635,21 @@ async def get_challenges():
 
 @api_router.get("/challenges/active", response_model=List[Challenge])
 async def get_active_challenges():
-    challenges = await db.challenges.find({"is_active": True}, {"_id": 0}).to_list(1000)
+    now = datetime.now(timezone.utc)
+    challenges = await db.challenges.find({
+        "is_active": True,
+        "$and": [
+            {"$or": [{"start_time": None}, {"start_time": {"$lte": now.isoformat()}}]},
+            {"$or": [{"end_time": None}, {"end_time": {"$gte": now.isoformat()}}]}
+        ]
+    }, {"_id": 0}).to_list(1000)
     for c in challenges:
         if isinstance(c.get("created_at"), str):
             c["created_at"] = datetime.fromisoformat(c["created_at"])
+        if isinstance(c.get("start_time"), str):
+            c["start_time"] = datetime.fromisoformat(c["start_time"])
+        if isinstance(c.get("end_time"), str):
+            c["end_time"] = datetime.fromisoformat(c["end_time"])
     return challenges
 
 @api_router.post("/challenges", response_model=Challenge)
@@ -593,6 +657,10 @@ async def create_challenge(data: ChallengeCreate):
     challenge = Challenge(**data.model_dump())
     doc = challenge.model_dump()
     doc["created_at"] = doc["created_at"].isoformat()
+    if doc.get("start_time"):
+        doc["start_time"] = doc["start_time"].isoformat()
+    if doc.get("end_time"):
+        doc["end_time"] = doc["end_time"].isoformat()
     await db.challenges.insert_one(doc)
     return challenge
 
@@ -735,17 +803,79 @@ async def get_league_stars():
 async def set_league_star(data: LeagueStarCreate):
     week = datetime.now(timezone.utc).isocalendar()[1]
     star_id = str(uuid.uuid4())
+    
+    # Fetch image directly from DB to avoid missing image issue
+    image_url = data.image_url or data.image
+    if not image_url and data.student_id:
+        student_doc = await db.students.find_one({"id": data.student_id}, {"image_url": 1})
+        if student_doc:
+            image_url = student_doc.get("image_url")
+    
     star_doc = {
         "id": star_id,
         "student_id": data.student_id,
         "student_name": data.student_name,
-        "image_url": data.image_url or data.image,
+        "image_url": image_url,
         "reason": data.reason,
         "week": week,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.league_star.insert_one(star_doc)
     return LeagueStar(**star_doc)
+
+@api_router.get("/matches/upcoming")
+async def get_upcoming_matches():
+    """Get all matches that are not completed yet (upcoming/scheduled)"""
+    matches = await db.matches.find({"status": {"$ne": "completed"}}, {"_id": 0}).to_list(1000)
+    for m in matches:
+        if isinstance(m.get("created_at"), str):
+            m["created_at"] = datetime.fromisoformat(m["created_at"])
+    return sorted(matches, key=lambda x: x.get("match_date", ""), reverse=False)
+
+# ==================== Team Endpoints ====================
+
+@api_router.get("/teams", response_model=List[Team])
+async def get_teams():
+    teams = await db.teams.find({}, {"_id": 0}).to_list(1000)
+    return teams
+
+@api_router.get("/teams/{name}", response_model=Optional[Team])
+async def get_team_by_name(name: str):
+    team = await db.teams.find_one({"name": name}, {"_id": 0})
+    return team
+
+@api_router.post("/teams", response_model=Team)
+async def create_or_update_team(data: TeamCreate):
+    existing = await db.teams.find_one({"name": data.name})
+    if existing:
+        await db.teams.update_one(
+            {"name": data.name},
+            {"$set": {
+                "group_photo": data.group_photo,
+                "lineup": data.lineup
+            }}
+        )
+        updated = await db.teams.find_one({"name": data.name}, {"_id": 0})
+        return Team(**updated)
+    
+    team = Team(**data.model_dump())
+    doc = team.model_dump()
+    doc["created_at"] = doc["created_at"].isoformat()
+    await db.teams.insert_one(doc)
+    return team
+
+@api_router.post("/teams/{name}/upload-photo")
+async def upload_team_photo(name: str, file: UploadFile = File(...)):
+    content = await file.read()
+    base64_img = base64.b64encode(content).decode("utf-8")
+    img_data = f"data:{file.content_type};base64,{base64_img}"
+    
+    await db.teams.update_one(
+        {"name": name},
+        {"$set": {"group_photo": img_data}},
+        upsert=True
+    )
+    return {"image_url": img_data}
 
 @api_router.delete("/league-star/{star_id}")
 async def delete_league_star(star_id: str):
@@ -1122,6 +1252,52 @@ async def review_qudurat_submission(submission_id: str, review: QuduratReview):
             "student_id": sub["student_id"],
             "points": review.points,
             "reason": f"قدرات - تلخيص فيديو: {video_title}",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.points_log.insert_one(log_entry)
+        
+    return {"success": True}
+
+@api_router.put("/qudurat/submissions/{submission_id}/edit-review")
+async def edit_qudurat_review(submission_id: str, review: QuduratReview):
+    """Edit a previously reviewed Qudurat submission - reverses old points and applies new"""
+    sub = await db.qudurat_submissions.find_one({"id": submission_id})
+    if not sub:
+        raise HTTPException(status_code=404, detail="غير موجود")
+    
+    old_status = sub.get("status")
+    old_points = sub.get("points_summary_awarded", 0)
+    
+    # Get qudurat item info
+    item = await db.qudurat.find_one({"id": sub["qudurat_id"]})
+    video_title = item.get("video_url") if item else "فيديو"
+    
+    # Reverse old points if they were awarded
+    if old_status == "approved" and old_points > 0:
+        await db.students.update_one({"id": sub["student_id"]}, {"$inc": {"points": -old_points}})
+        log_entry = {
+            "id": str(uuid.uuid4()),
+            "student_id": sub["student_id"],
+            "points": -old_points,
+            "reason": f"تعديل تقييم قدرات - إلغاء: {video_title}",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.points_log.insert_one(log_entry)
+    
+    # Update with new review
+    await db.qudurat_submissions.update_one(
+        {"id": submission_id}, 
+        {"$set": {"status": review.status, "points_summary_awarded": review.points}}
+    )
+    
+    # Award new points if approved
+    if review.status == "approved" and review.points > 0:
+        await db.students.update_one({"id": sub["student_id"]}, {"$inc": {"points": review.points}})
+        log_entry = {
+            "id": str(uuid.uuid4()),
+            "student_id": sub["student_id"],
+            "points": review.points,
+            "reason": f"تعديل تقييم قدرات - تلخيص: {video_title}",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.points_log.insert_one(log_entry)

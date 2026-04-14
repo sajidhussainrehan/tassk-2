@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
+import { Html5Qrcode } from "html5-qrcode";
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
 const API = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
@@ -49,14 +50,6 @@ function AttendanceManager({ onAttendanceChange }) {
   useEffect(() => {
     fetchStudents();
     fetchTodayAttendance();
-
-    // Load html5-qrcode script
-    if (!window.Html5Qrcode) {
-      const script = document.createElement("script");
-      script.src = "https://unpkg.com/html5-qrcode";
-      script.async = true;
-      document.body.appendChild(script);
-    }
   }, []);
 
   // Timer functionality
@@ -197,27 +190,30 @@ function AttendanceManager({ onAttendanceChange }) {
   };
 
   const startScanning = () => {
-    if (!window.Html5Qrcode) {
-      alert("جاري تحميل نظام المسح... يرجى المحاولة بعد قليل");
-      return;
-    }
     setScanning(true);
     setTimeout(() => {
-      const html5QrCode = new window.Html5Qrcode("reader");
-      scannerRef.current = html5QrCode;
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          setBarcodeInput(decodedText);
-          handleBarcodeSubmit({ preventDefault: () => {} }, decodedText);
-          stopScanning();
-        },
-        () => {}
-      ).catch(() => {
+      try {
+        const html5QrCode = new Html5Qrcode("reader");
+        scannerRef.current = html5QrCode;
+        html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText) => {
+            setBarcodeInput(decodedText);
+            handleBarcodeSubmit({ preventDefault: () => {} }, decodedText);
+            stopScanning();
+          },
+          () => {}
+        ).catch((err) => {
+          console.error("Camera start error:", err);
+          setScanning(false);
+          alert("خطأ في تشغيل الكاميرا - تأكد من منح صلاحية الوصول للكاميرا");
+        });
+      } catch (err) {
+        console.error("Scanner init error:", err);
         setScanning(false);
         alert("خطأ في تشغيل الكاميرا");
-      });
+      }
     }, 500);
   };
 

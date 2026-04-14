@@ -15,7 +15,9 @@ function ChallengesManager() {
     question: "",
     options: ["", "", "", ""],
     correct_answer: 0,
-    points: 10
+    points: 10,
+    start_time: "",
+    end_time: ""
   });
 
   const fetchChallenges = async () => {
@@ -41,7 +43,9 @@ function ChallengesManager() {
         question: "",
         options: ["", "", "", ""],
         correct_answer: 0,
-        points: 10
+        points: 10,
+        start_time: "",
+        end_time: ""
       });
       setShowAddModal(false);
       showMessage("تمت إضافة المنافسة بنجاح!");
@@ -131,8 +135,20 @@ function ChallengesManager() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-gray-800 mb-2">{challenge.question}</h3>
-                  <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm inline-block">
-                    {challenge.points} نقطة
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">
+                      {challenge.points} نقطة
+                    </div>
+                    {challenge.start_time && (
+                      <div className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] border border-blue-200">
+                        📅 يبدأ: {new Date(challenge.start_time).toLocaleString('ar-EG')}
+                      </div>
+                    )}
+                    {challenge.end_time && (
+                      <div className="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] border border-red-200">
+                        ⌛ ينتهي: {new Date(challenge.end_time).toLocaleString('ar-EG')}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -242,6 +258,27 @@ function ChallengesManager() {
                     min="1"
                     required
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">وقت البدء (اختياري)</label>
+                    <input
+                      type="datetime-local"
+                      value={newChallenge.start_time}
+                      onChange={(e) => setNewChallenge({ ...newChallenge, start_time: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">وقت الانتهاء (اختياري)</label>
+                    <input
+                      type="datetime-local"
+                      value={newChallenge.end_time}
+                      onChange={(e) => setNewChallenge({ ...newChallenge, end_time: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
                 </div>
               </div>
 

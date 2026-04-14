@@ -8,6 +8,7 @@ import TasksManager from "./TasksManager";
 import LeagueStarManager from "./LeagueStarManager";
 import ViewerLinksManager from "./ViewerLinksManager";
 import GroupsManager from "./GroupsManager";
+import TeamManager from "./TeamManager";
 import QuduratManager from "./QuduratManager";
 import AttendanceManager from "./AttendanceManager";
 import TeacherManagement from "./TeacherManagement";
@@ -36,6 +37,7 @@ function Dashboard({ onLogout }) {
   const [leagueStar, setLeagueStar] = useState(null);
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
   const [teachers, setTeachers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Add student form
   const [newName, setNewName] = useState("");
@@ -251,6 +253,9 @@ function Dashboard({ onLogout }) {
         {/* ===== Groups Section ===== */}
         {activeSection === "groups" && <GroupsManager onGroupsChange={(names) => setSupervisors(names)} />}
 
+        {/* ===== League Section ===== */}
+        {activeSection === "league" && <TeamManager groups={supervisors} students={students} />}
+
         {/* ===== Students Section ===== */}
         {activeSection === "students" && (
           <div className="space-y-4">
@@ -281,19 +286,30 @@ function Dashboard({ onLogout }) {
               </div>
             </div>
 
-            {/* Teacher Stats (Optional but helpful) */}
-            <div className="flex gap-2 flex-wrap mb-4">
-              <span className="text-sm font-bold text-gray-700">المعلمون النشطون:</span>
-              {[...new Set(students.map(s => s.teacher).filter(Boolean))].map(t => (
-                <span key={t} className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs">{t}</span>
-              ))}
-              {students.filter(s => s.teacher).length === 0 && <span className="text-xs text-gray-400">لا يوجد معلمون محددون</span>}
+            {/* Search */}
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="🔍 بحث عن طالب بالاسم..."
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 text-sm bg-white shadow-sm"
+                data-testid="student-search"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
             {/* Students by Group */}
             {supervisors.map((sup, si) => {
               const color = getColor(si);
-              const groupStudents = students.filter(s => s.supervisor === sup);
+              const groupStudents = students.filter(s => s.supervisor === sup && (!searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase())));
               return (
                 <div key={sup} className="bg-white rounded-xl shadow-lg overflow-hidden">
                   <div className={`bg-gradient-to-r ${color.gradient} text-white p-3 flex items-center justify-between`}>

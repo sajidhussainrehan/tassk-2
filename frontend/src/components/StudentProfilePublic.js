@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import RamadanQuiz from "./RamadanQuiz";
 import QuduratStudent from "./QuduratStudent";
@@ -41,17 +41,21 @@ function StudentProfileContent({ setRenderError }) {
   const [tasks, setTasks] = useState([]);
   const [pointsLog, setPointsLog] = useState([]);
   const [standings, setStandings] = useState([]);
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
+  const [rankings, setRankings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   const fetchData = useCallback(async () => {
     try {
-      const [profileRes, starRes, challengesRes, standingsRes] = await Promise.all([
+      const [profileRes, starRes, challengesRes, standingsRes, upcomingRes, rankingsRes] = await Promise.all([
         axios.get(`${API}/students/${studentId}/profile`),
         axios.get(`${API}/league-star`),
         axios.get(`${API}/challenges/active`),
-        axios.get(`${API}/league-standings`)
+        axios.get(`${API}/league-standings`),
+        axios.get(`${API}/matches/upcoming`).catch(() => ({ data: [] })),
+        axios.get(`${API}/students/rankings`).catch(() => ({ data: [] }))
       ]);
       setStudent(profileRes.data.student);
       setRank(profileRes.data.rank);
@@ -59,6 +63,8 @@ function StudentProfileContent({ setRenderError }) {
       setLeagueStar(starRes.data);
       setChallenges(challengesRes.data);
       setStandings(standingsRes.data);
+      setUpcomingMatches(Array.isArray(upcomingRes.data) ? upcomingRes.data : []);
+      setRankings(Array.isArray(rankingsRes.data) ? rankingsRes.data : []);
 
       // Fetch all students to calculate group rank
       const allStudentsRes = await axios.get(`${API}/students`);
@@ -230,6 +236,72 @@ function StudentProfileContent({ setRenderError }) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* League Page Link */}
+        <Link to="/league" className="block bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-2xl p-4 text-center font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02]">
+          ⚽ عرض صفحة الدوري الكاملة
+        </Link>
+
+        {/* Upcoming Matches */}
+        {upcomingMatches.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-orange-100">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-3">
+              <h3 className="font-bold text-center text-sm">⚽ المباريات القادمة</h3>
+            </div>
+            <div className="p-4 space-y-3">
+              {upcomingMatches.map((match, i) => (
+                <div key={match.id || i} className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-gray-50 to-orange-50 border border-orange-200">
+                  <div className="flex-1 text-center">
+                    <span className="font-bold text-gray-800 text-sm">{match.team1}</span>
+                  </div>
+                  <div className="px-4 py-1 bg-orange-100 rounded-full text-orange-700 font-bold text-xs">
+                    VS
+                  </div>
+                  <div className="flex-1 text-center">
+                    <span className="font-bold text-gray-800 text-sm">{match.team2}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Full Rankings Leaderboard */}
+        {rankings.length > 0 && (
+          <div className="bg-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-700">
+            <div className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white p-3">
+              <h3 className="font-bold text-center text-sm">🏆 ترتيب الفانتازي - جميع الطلاب</h3>
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {rankings.map((r) => (
+                <div
+                  key={r.id}
+                  className={`flex items-center gap-3 px-4 py-3 border-b border-gray-800 ${
+                    r.id === studentId ? "bg-yellow-900/30 border-l-4 border-l-yellow-500" : ""
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                    r.rank === 1 ? "bg-yellow-500 text-black" :
+                    r.rank === 2 ? "bg-gray-400 text-black" :
+                    r.rank === 3 ? "bg-amber-700 text-white" :
+                    "bg-gray-700 text-gray-300"
+                  }`}>
+                    {r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold truncate ${r.id === studentId ? "text-yellow-400" : "text-gray-200"}`}>{r.name}</p>
+                    <p className="text-xs text-gray-500">{r.supervisor}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    r.id === studentId ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400"
+                  }`}>
+                    {r.points} ⭐
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         )}
