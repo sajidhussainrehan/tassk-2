@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import RamadanQuiz from "./RamadanQuiz";
 import QuduratStudent from "./QuduratStudent";
+import ChallengesStudent from "./ChallengesStudent";
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
 const API = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
@@ -12,19 +13,37 @@ function StudentProfilePublic() {
   const [student, setStudent] = useState(null);
   const [rankInfo, setRankInfo] = useState({ rank: 0, total: 0 });
   const [upcomingMatches, setUpcomingMatches] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
 
   const fetchStudent = useCallback(async () => {
     try {
       setLoading(true);
-      const [profileRes, matchesRes] = await Promise.all([
-        axios.get(`${API}/students/${paramId}/profile`),
-        axios.get(`${API}/matches/upcoming`).catch(() => ({ data: [] }))
+      const [profileRes, matchesRes, leaderboardRes] = await Promise.all([
+        axios.get(`${API}/students/${paramId}/profile`).catch(err => {
+          console.error("Profile error:", err);
+          return { data: { student: null, rank: 0, total_students: 0 } };
+        }),
+        axios.get(`${API}/matches/upcoming`).catch(err => {
+          console.error("Matches error:", err);
+          return { data: [] };
+        }),
+        axios.get(`${API}/students`).catch(err => {
+          console.error("Leaderboard error:", err);
+          return { data: [] };
+        })
       ]);
-      setStudent(profileRes.data.student);
-      setRankInfo({ rank: profileRes.data.rank, total: profileRes.data.total_students });
+
+      if (profileRes.data && profileRes.data.student) {
+        setStudent(profileRes.data.student);
+        setRankInfo({ rank: profileRes.data.rank, total: profileRes.data.total_students });
+      } else {
+        setStudent(null);
+      }
+      
       setUpcomingMatches(matchesRes.data || []);
+      setLeaderboard(leaderboardRes.data || []);
     } catch (err) {
       console.error("Error fetching student:", err);
     } finally {
@@ -195,9 +214,70 @@ function StudentProfilePublic() {
 
         {/* Quizzes & Summaries */}
         <div className="space-y-12">
+            <ChallengesStudent studentId={student.id} studentName={student.name} />
             <RamadanQuiz studentId={student.id} studentName={student.name} />
             <QuduratStudent studentId={student.id} studentName={student.name} />
         </div>
+
+        {/* Global Leaderboard */}
+        {leaderboard.length > 0 && (
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-gray-100 border border-gray-100">
+            <h3 className="text-sm font-black text-gray-400 mb-6 uppercase tracking-[0.3em] mr-2 text-center">ترتيب نجوم النادي 📊</h3>
+            <div className="space-y-3">
+              {leaderboard.slice(0, 10).map((s, idx) => (
+                <div 
+                  key={s.id} 
+                  className={`flex items-center gap-4 p-4 rounded-3xl border transition-all ${
+                    s.id === student.id 
+                      ? "bg-[#006d44] text-white border-transparent scale-105 shadow-lg z-10" 
+                      : "bg-gray-50 border-gray-100"
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm ${
+                    idx === 0 ? "bg-yellow-400 text-white" : 
+                    idx === 1 ? "bg-gray-300 text-white" : 
+                    idx === 2 ? "bg-orange-400 text-white" : 
+                    s.id === student.id ? "bg-white/20" : "bg-gray-200 text-gray-400"
+                  }`}>
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1">
+                    <p className={`font-black text-sm ${s.id === student.id ? "text-white" : "text-gray-800"}`}>
+                      {s.name}
+                      {s.id === student.id && <span className="mr-2 text-[10px] bg-white/20 px-2 py-0.5 rounded-full">أنت</span>}
+                    </p>
+                    <p className={`text-[10px] ${s.id === student.id ? "text-white/60" : "text-gray-400"}`}>{s.group}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-black text-base italic ${s.id === student.id ? "text-white" : "text-[#006d44]"}`}>{s.points}</p>
+                    <p className={`text-[8px] font-bold uppercase ${s.id === student.id ? "text-white/40" : "text-gray-300"}`}>Points</p>
+                  </div>
+                </div>
+              ))}
+              {leaderboard.length > 10 && !leaderboard.slice(0, 10).some(s => s.id === student.id) && (
+                <>
+                  <div className="text-center text-gray-300 py-2">•••</div>
+                  <div className="flex items-center gap-4 p-4 rounded-3xl border bg-[#006d44] text-white border-transparent scale-105 shadow-lg">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm bg-white/20">
+                      {rankInfo.rank}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-black text-sm text-white">
+                        {student.name}
+                        <span className="mr-2 text-[10px] bg-white/20 px-2 py-0.5 rounded-full">أنت</span>
+                      </p>
+                      <p className="text-[10px] text-white/60">{student.group}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-base italic text-white">{student.points}</p>
+                      <p className="text-[8px] font-bold uppercase text-white/40">Points</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Fixed Bottom Bar (Image 3/4 nav) */}

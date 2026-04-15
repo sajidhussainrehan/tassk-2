@@ -148,48 +148,76 @@ function TeamManager({ groups, students }) {
             </button>
           </div>
 
-          <div className="relative aspect-[4/5] bg-emerald-700 rounded-3xl overflow-hidden border-4 border-white shadow-2xl">
-            {/* Field Markings */}
-            <div className="absolute inset-4 border-2 border-white/40 pointer-events-none"></div>
-            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/40"></div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white/40 rounded-full"></div>
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-48 h-24 border-2 border-white/40"></div>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-48 h-24 border-2 border-white/40"></div>
+          <div className="relative aspect-[4/5] bg-[#004e31] rounded-[2.5rem] overflow-hidden border-4 border-[#006d44] shadow-2xl">
+            {/* 3D Grass Effect & Field Markings */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 10%, rgba(255,255,255,0.1) 10%, rgba(255,255,255,0.1) 20%)' }}></div>
+            <div className="absolute inset-6 border-2 border-white/30 pointer-events-none"></div>
+            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/30"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white/30 rounded-full"></div>
+            
+            {/* Goal Areas */}
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 w-48 h-24 border-2 border-white/30 bg-white/5"></div>
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-48 h-24 border-2 border-white/10 bg-white/5"></div>
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 w-24 h-8 border-2 border-white/30 border-t-0 rounded-b-lg"></div>
 
             {!selectedGroup ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm text-white font-bold p-8 text-center">
-                الرجاء اختيار مجموعة للبدء في تنظيم التشكيلة
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-md text-white font-bold p-8 text-center z-50">
+                <div className="space-y-4">
+                  <div className="text-4xl text-emerald-400">🛡️</div>
+                  <p>الرجاء اختيار مجموعة للبدء في تنظيم التشكيلة</p>
+                </div>
               </div>
             ) : (
-              <div className="absolute inset-0">
+              <div className="absolute inset-0" id="field-area">
                 {teamData.lineup.map(player => (
                   <div
                     key={player.student_id}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-move group h-12 w-12"
-                    style={{ left: `${player.x}%`, top: `${player.y}%` }}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing group z-40"
+                    style={{ left: `${player.x}%`, top: `${player.y}%`, transition: 'none' }}
                     onMouseDown={(e) => {
-                      const rect = e.currentTarget.parentElement.getBoundingClientRect();
-                      const handleMouseMove = (mmE) => {
+                      const rect = document.getElementById('field-area').getBoundingClientRect();
+                      const move = (mmE) => {
                         const x = Math.min(100, Math.max(0, ((mmE.clientX - rect.left) / rect.width) * 100));
                         const y = Math.min(100, Math.max(0, ((mmE.clientY - rect.top) / rect.height) * 100));
                         updatePosition(player.student_id, x, y);
                       };
-                      const handleMouseUp = () => {
-                        window.removeEventListener("mousemove", handleMouseMove);
-                        window.removeEventListener("mouseup", handleMouseUp);
+                      const up = () => {
+                        window.removeEventListener("mousemove", move);
+                        window.removeEventListener("mouseup", up);
                       };
-                      window.addEventListener("mousemove", handleMouseMove);
-                      window.addEventListener("mouseup", handleMouseUp);
+                      window.addEventListener("mousemove", move);
+                      window.addEventListener("mouseup", up);
+                    }}
+                    onTouchStart={(e) => {
+                      const rect = document.getElementById('field-area').getBoundingClientRect();
+                      const move = (te) => {
+                        const touch = te.touches[0];
+                        const x = Math.min(100, Math.max(0, ((touch.clientX - rect.left) / rect.width) * 100));
+                        const y = Math.min(100, Math.max(0, ((touch.clientY - rect.top) / rect.height) * 100));
+                        updatePosition(player.student_id, x, y);
+                      };
+                      const end = () => {
+                        window.removeEventListener("touchmove", move);
+                        window.removeEventListener("touchend", end);
+                      };
+                      window.addEventListener("touchmove", move);
+                      window.addEventListener("touchend", end);
                     }}
                   >
-                    <div className="relative h-12 w-12 bg-white rounded-full shadow-lg border-2 border-emerald-500 flex items-center justify-center text-emerald-700 font-bold overflow-hidden">
-                      <span className="text-[10px] text-center">{player.name}</span>
+                    <div className="relative">
+                      <div className="w-14 h-14 bg-white rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.3)] border-2 border-emerald-600 flex flex-col items-center justify-center overflow-hidden transition-transform group-hover:scale-110">
+                         <div className="bg-emerald-600 text-white w-full py-0.5 text-[7px] font-black uppercase text-center">{player.name.split(' ')[0]}</div>
+                         <div className="flex-1 flex items-center justify-center text-[18px]">👤</div>
+                      </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); removeFromLineup(player.student_id); }}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full text-[10px] hidden group-hover:flex items-center justify-center"
+                        className="absolute -top-1 -right-1 bg-red-500 text-white w-6 h-6 rounded-full text-[12px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border-2 border-white font-bold"
                       >
                         ✕
                       </button>
+                    </div>
+                    <div className="mt-1 bg-black/50 backdrop-blur-sm text-white text-[8px] px-2 py-0.5 rounded-full whitespace-nowrap opacity-80 group-hover:opacity-100 transition-opacity">
+                      {player.name}
                     </div>
                   </div>
                 ))}

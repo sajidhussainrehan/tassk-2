@@ -8,18 +8,21 @@ const API = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
 function SportsLeaguePage() {
   const [matches, setMatches] = useState([]);
   const [standings, setStandings] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [activeTab, setActiveTab] = useState("ranking");
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [mRes, sRes] = await Promise.all([
+      const [mRes, sRes, tRes] = await Promise.all([
         axios.get(`${API}/matches`),
-        axios.get(`${API}/league-standings`)
+        axios.get(`${API}/league-standings`),
+        axios.get(`${API}/teams`)
       ]);
       setMatches(mRes.data || []);
       setStandings(sRes.data || []);
+      setTeams(tRes.data || []);
     } catch (err) {
       console.error("League data error:", err);
     } finally {
@@ -90,6 +93,7 @@ function SportsLeaguePage() {
       <div className="flex gap-2 bg-[#1a1f2e]/50 p-1.5 rounded-2xl mb-8 border border-white/5">
         <button onClick={() => setActiveTab("ranking")} className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${activeTab === "ranking" ? "bg-[#006d44] text-white shadow-xl scale-[1.02]" : "text-gray-500"}`}>ترتيب الفانتازي</button>
         <button onClick={() => setActiveTab("results")} className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${activeTab === "results" ? "bg-[#006d44] text-white shadow-xl scale-[1.02]" : "text-gray-500"}`}>آخر النتائج</button>
+        <button onClick={() => setActiveTab("teams")} className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${activeTab === "teams" ? "bg-[#006d44] text-white shadow-xl scale-[1.02]" : "text-gray-500"}`}>الفرق</button>
       </div>
 
       {/* Content */}
@@ -112,7 +116,7 @@ function SportsLeaguePage() {
                 </div>
             </div>
           ))
-        ) : (
+        ) : activeTab === "results" ? (
           matches.filter(m => m.status === "completed").map((m, idx) => (
             <div key={idx} className="bg-[#1a1f2e] rounded-3xl p-6 border border-white/5 shadow-lg">
                 <div className="flex items-center justify-between mb-4">
@@ -138,7 +142,45 @@ function SportsLeaguePage() {
                 </div>
             </div>
           ))
-        )}
+        ) : activeTab === "teams" ? (
+          teams.length > 0 ? (
+            teams.map((t, idx) => (
+              <div key={idx} className="bg-[#1a1f2e] rounded-3xl p-6 border border-white/5 shadow-lg mb-4">
+                <h3 className="text-xl font-black italic uppercase text-center mb-4 text-[#006d44]">{t.name}</h3>
+                {t.group_photo && (
+                  <img src={t.group_photo.startsWith('data:') ? t.group_photo : `${API_BASE}${t.group_photo}`} alt="Team" className="w-full aspect-video object-cover rounded-xl shadow-md border-2 border-[#006d44]/30 mb-6" />
+                )}
+                
+                <div className="relative aspect-[4/5] bg-gradient-to-t from-[#004e31] to-[#014029] rounded-3xl overflow-hidden border-2 border-white/20 shadow-inner">
+                  {/* Field Markings */}
+                  <div className="absolute inset-4 border-2 border-white/30 pointer-events-none"></div>
+                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/30"></div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full"></div>
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 w-40 h-20 border-2 border-white/30"></div>
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-40 h-20 border-2 border-white/30"></div>
+                  
+                  {/* Players */}
+                  <div className="absolute inset-0">
+                    {t.lineup && t.lineup.map(player => (
+                      <div
+                        key={player.student_id}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 h-10 w-10 flex flex-col items-center justify-center pointer-events-none"
+                        style={{ left: `${player.x}%`, top: `${player.y}%` }}
+                      >
+                        <div className="w-8 h-8 bg-white rounded-full shadow-lg border-2 border-[#006d44] flex items-center justify-center text-[#006d44] font-black text-xs mb-1">
+                          {player.name.charAt(0)}
+                        </div>
+                        <span className="text-[9px] font-bold bg-black/60 px-2 py-0.5 rounded text-white whitespace-nowrap">{player.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-10 text-gray-400 font-bold">لا يوجد تشكيلات للفرق بعد</div>
+          )
+        ) : null}
       </div>
 
       {/* Bottom Nav (Consistent with Home) */}

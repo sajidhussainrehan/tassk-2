@@ -192,6 +192,7 @@ function Dashboard({ onLogout }) {
     { id: "attendance", label: "الحضور", icon: "📱" },
     { id: "tasks", label: "المهام", icon: "📋" },
     { id: "league", label: "الدوري", icon: "⚽" },
+    { id: "teams", label: "تشكيلات الفرق", icon: "🛡️" },
     { id: "star", label: "نجم الدوري", icon: "⭐" },
     { id: "viewers", label: "روابط المشاهدة", icon: "🔗" },
     { id: "qudurat", label: "القدرات", icon: "🍿" },
@@ -259,8 +260,9 @@ function Dashboard({ onLogout }) {
         {/* ===== Groups Section ===== */}
         {activeSection === "groups" && <GroupsManager onGroupsChange={(names) => setSupervisors(names)} />}
 
-        {/* ===== League Section ===== */}
-        {activeSection === "league" && <TeamManager groups={supervisors} students={students} />}
+        {/* ===== League & Teams Sections ===== */}
+        {activeSection === "league" && <FootballLeague supervisors={supervisors} />}
+        {activeSection === "teams" && <TeamManager groups={supervisors} students={students} />}
 
         {/* ===== Students Section ===== */}
         {activeSection === "students" && (
@@ -407,8 +409,9 @@ function Dashboard({ onLogout }) {
         {/* ===== Tasks Section ===== */}
         {activeSection === "tasks" && <TasksManager supervisors={supervisors} />}
 
-        {/* ===== League Section ===== */}
+        {/* ===== Leagues & Teams Sections ===== */}
         {activeSection === "league" && <FootballLeague supervisors={supervisors} />}
+        {activeSection === "teams" && <TeamManager groups={supervisors} students={students} />}
 
         {/* ===== Star Section ===== */}
         {activeSection === "star" && <LeagueStarManager />}

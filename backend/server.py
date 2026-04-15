@@ -1573,6 +1573,51 @@ async def get_today_attendance():
     
     return {"session": session, "records": records}
 
+# ==================== Teams Management ====================
+
+class TeamPlayer(BaseModel):
+    student_id: str
+    name: str
+    x: float
+    y: float
+
+class TeamUpdate(BaseModel):
+    name: str
+    group_photo: str = ""
+    lineup: List[TeamPlayer] = []
+
+@api_router.get("/teams")
+async def get_all_teams():
+    teams = await db.teams.find({}, {"_id": 0}).to_list(100)
+    return teams
+
+@api_router.get("/teams/{group_name}")
+async def get_team(group_name: str):
+    team = await db.teams.find_one({"name": group_name}, {"_id": 0})
+    if team:
+        return team
+    return {"name": group_name, "group_photo": "", "lineup": []}
+
+@api_router.post("/teams")
+async def save_team(data: TeamUpdate):
+    doc = data.model_dump()
+    await db.teams.update_one({"name": data.name}, {"$set": doc}, upsert=True)
+    return {"success": True}
+
+@api_router.post("/teams/{group_name}/upload-photo")
+async def upload_team_photo(group_name: str, file: UploadFile = File(...)):
+    contents = await file.read()
+    b64 = base64.b64encode(contents).decode('utf-8')
+    mime = file.content_type or "image/png"
+    image_url = f"data:{mime};base64,{b64}"
+    
+    await db.teams.update_one(
+        {"name": group_name},
+        {"$set": {"group_photo": image_url}},
+        upsert=True
+    )
+    return {"image_url": image_url}
+
 # ==================== Health Check ====================
 
 @api_router.get("/health")

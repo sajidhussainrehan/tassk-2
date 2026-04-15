@@ -16,6 +16,26 @@ function QuduratStudent({ studentId, studentName, onUpdate }) {
 
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes default
+  const [timerActive, setTimerActive] = useState(false);
+
+  useEffect(() => {
+    let timer;
+    if (timerActive && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      setTimerActive(false);
+    }
+    return () => clearInterval(timer);
+  }, [timerActive, timeLeft]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const fetchData = async () => {
     try {
@@ -101,7 +121,18 @@ function QuduratStudent({ studentId, studentName, onUpdate }) {
               {/* Card Header/Preview */}
               <div 
                 className={`p-4 cursor-pointer flex items-center justify-between ${isExpanded ? "bg-green-50" : "bg-white hover:bg-gray-50"}`}
-                onClick={() => !submission && setExpandedItem(isExpanded ? null : item.id)}
+                onClick={() => {
+                  if (!submission) {
+                    if (!isExpanded) {
+                      setExpandedItem(item.id);
+                      setTimeLeft(600); // Reset timer to 10 mins
+                      setTimerActive(true);
+                    } else {
+                      setExpandedItem(null);
+                      setTimerActive(false);
+                    }
+                  }
+                }}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-xl">
@@ -140,6 +171,14 @@ function QuduratStudent({ studentId, studentName, onUpdate }) {
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     ></iframe>
+                  </div>
+
+                  {/* Timer & Question */}
+                  <div className="flex items-center justify-between bg-black text-lime-400 p-3 rounded-xl border-2 border-lime-500 shadow-md">
+                    <span className="font-black text-xs uppercase tracking-widest">الوفت المتبقي ⏳</span>
+                    <span className={`text-xl font-black italic ${timeLeft < 60 ? "text-red-500 animate-pulse" : ""}`}>
+                      {timeLeft > 0 ? formatTime(timeLeft) : "انتهى الوقت!"}
+                    </span>
                   </div>
 
                   {/* Question */}
