@@ -10,14 +10,19 @@ const API = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
 function StudentProfilePublic() {
   const { studentId: paramId } = useParams();
   const [student, setStudent] = useState(null);
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
 
   const fetchStudent = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/students/${paramId}`);
-      setStudent(res.data);
+      const [studentRes, matchesRes] = await Promise.all([
+        axios.get(`${API}/students/${paramId}`),
+        axios.get(`${API}/matches/upcoming`).catch(() => ({ data: [] }))
+      ]);
+      setStudent(studentRes.data);
+      setUpcomingMatches(matchesRes.data || []);
     } catch (err) {
       console.error("Error fetching student:", err);
     } finally {
@@ -149,6 +154,44 @@ function StudentProfilePublic() {
               ))}
           </div>
         </div>
+
+        {/* Upcoming League Matches */}
+        {upcomingMatches.length > 0 && (
+          <div>
+            <h3 className="text-sm font-black text-gray-400 mb-6 uppercase tracking-[0.3em] mr-2">المباريات القادمة</h3>
+            <div className="space-y-4">
+              {upcomingMatches.map((match, idx) => (
+                <div key={match.id || idx} className="bg-[#1a1f2e] text-white rounded-3xl p-6 border border-white/5 shadow-lg overflow-hidden relative">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#006d44] to-emerald-400"></div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">⚽ مباراة قادمة</span>
+                    {match.match_date && (
+                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
+                        📅 {match.match_date}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-center">
+                    <div className="flex-1">
+                      <div className="w-14 h-14 bg-gradient-to-br from-emerald-500/20 to-emerald-700/10 rounded-full mx-auto mb-3 flex items-center justify-center text-xl shadow-inner border border-emerald-500/20">🛡️</div>
+                      <p className="text-[11px] font-black uppercase text-gray-200">{match.team1}</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 px-4">
+                      <span className="text-2xl font-black text-gray-500 italic">VS</span>
+                      <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                        {match.status === "scheduled" ? "مجدولة" : "قريباً"}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-blue-700/10 rounded-full mx-auto mb-3 flex items-center justify-center text-xl shadow-inner border border-blue-500/20">🛡️</div>
+                      <p className="text-[11px] font-black uppercase text-gray-200">{match.team2}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quizzes & Summaries */}
         <div className="space-y-12">
