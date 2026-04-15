@@ -199,10 +199,22 @@ function Dashboard({ onLogout }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50" dir="rtl">
+      {/* Premium Glass Header */}
+      <div className="bg-[#006d44] text-white shadow-xl">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl shadow-inner backdrop-blur-sm border border-white/10">
+                🌿
+              </div>
+              <div>
+                <h1 className="text-2xl font-black italic tracking-tighter uppercase leading-none">Ghiras Dashboard</h1>
+                <p className="text-[10px] font-bold text-white/60 tracking-widest uppercase mt-1">Management Portal v4.0</p>
+              </div>
             </div>
             <div className="flex gap-2">
-              <Link to="/challenges" className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold" data-testid="challenges-link">🏆 المنافسات</Link>
-              <button onClick={onLogout} className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold" data-testid="logout-btn">🚪 خروج</button>
+              <Link to="/challenges" className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold transition-all backdrop-blur-sm border border-white/10" data-testid="challenges-link">🏆 المنافسات</Link>
+              <button onClick={onLogout} className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold transition-all backdrop-blur-sm border border-white/10" data-testid="logout-btn">🚪 خروج</button>
             </div>
           </div>
         </div>
@@ -229,6 +241,7 @@ function Dashboard({ onLogout }) {
           <div className="bg-white border-r-4 border-green-500 text-green-700 p-3 rounded-lg shadow text-center font-semibold animate-fadeIn">{message}</div>
         </div>
       )}
+
 
       <div className="container mx-auto px-4 py-4">
         {/* Section Tabs */}
