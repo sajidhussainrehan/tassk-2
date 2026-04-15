@@ -72,15 +72,15 @@ function StudentProfilePublic() {
   }
 
   const services = [
-    { name: "مقاطع الفيديو", icon: "📹", color: "bg-blue-100 text-blue-600", link: "/" },
-    { name: "الاستثمارات", icon: "📈", color: "bg-emerald-100 text-emerald-600", link: "/" },
-    { name: "المبادرات", icon: "🚩", color: "bg-orange-100 text-orange-600", link: "/" },
-    { name: "الحلقة", icon: "✅", color: "bg-purple-100 text-purple-600", link: "/" },
-    { name: "المسابقات", icon: "🏆", color: "bg-yellow-100 text-yellow-600", link: "/" },
-    { name: "الحضور", icon: "📅", color: "bg-cyan-100 text-cyan-600", link: "/" },
-    { name: "كشف الحساب", icon: "📄", color: "bg-rose-100 text-rose-600", link: "/" },
+    { name: "مقاطع الفيديو", icon: "📹", color: "bg-blue-100 text-blue-600", link: "#" },
+    { name: "الاستثمارات", icon: "📈", color: "bg-emerald-100 text-emerald-600", link: "#" },
+    { name: "المبادرات", icon: "🚩", color: "bg-orange-100 text-orange-600", link: "#" },
+    { name: "الحلقة", icon: "✅", color: "bg-purple-100 text-purple-600", link: "#" },
+    { name: "المسابقات", icon: "🏆", color: "bg-yellow-100 text-yellow-600", link: "#" },
+    { name: "الحضور", icon: "📅", color: "bg-cyan-100 text-cyan-600", link: "#" },
+    { name: "كشف الحساب", icon: "📄", color: "bg-rose-100 text-rose-600", link: "#" },
     { name: "الترتيب", icon: "📊", color: "bg-indigo-100 text-indigo-600", link: "/league" },
-    { name: "الكتب", icon: "📚", color: "bg-amber-100 text-amber-600", link: "/" }
+    { name: "الكتب", icon: "📚", color: "bg-amber-100 text-amber-600", link: "#" }
   ];
 
   return (

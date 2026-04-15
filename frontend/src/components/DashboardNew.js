@@ -198,6 +198,11 @@ function Dashboard({ onLogout }) {
     { id: "qudurat", label: "القدرات", icon: "🍿" },
   ];
 
+  if (!localStorage.getItem("ghiras_token")) {
+    window.location.href = "/login";
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50" dir="rtl">
       {/* Premium Glass Header */}

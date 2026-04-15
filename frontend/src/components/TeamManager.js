@@ -172,9 +172,10 @@ function TeamManager({ groups, students }) {
                 {teamData.lineup.map(player => (
                   <div
                     key={player.student_id}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing group z-40"
+                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing group z-40 touch-none"
                     style={{ left: `${player.x}%`, top: `${player.y}%`, transition: 'none' }}
                     onMouseDown={(e) => {
+                      e.preventDefault();
                       const rect = document.getElementById('field-area').getBoundingClientRect();
                       const move = (mmE) => {
                         const x = Math.min(100, Math.max(0, ((mmE.clientX - rect.left) / rect.width) * 100));
@@ -189,8 +190,10 @@ function TeamManager({ groups, students }) {
                       window.addEventListener("mouseup", up);
                     }}
                     onTouchStart={(e) => {
+                      // Prevent scrolling while dragging
                       const rect = document.getElementById('field-area').getBoundingClientRect();
                       const move = (te) => {
+                        if (te.cancelable) te.preventDefault();
                         const touch = te.touches[0];
                         const x = Math.min(100, Math.max(0, ((touch.clientX - rect.left) / rect.width) * 100));
                         const y = Math.min(100, Math.max(0, ((touch.clientY - rect.top) / rect.height) * 100));
@@ -200,7 +203,7 @@ function TeamManager({ groups, students }) {
                         window.removeEventListener("touchmove", move);
                         window.removeEventListener("touchend", end);
                       };
-                      window.addEventListener("touchmove", move);
+                      window.addEventListener("touchmove", move, { passive: false });
                       window.addEventListener("touchend", end);
                     }}
                   >
