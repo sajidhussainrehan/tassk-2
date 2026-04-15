@@ -9,20 +9,26 @@ function SportsLeaguePage() {
   const [matches, setMatches] = useState([]);
   const [standings, setStandings] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [students, setStudents] = useState({});
   const [activeTab, setActiveTab] = useState("ranking");
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [mRes, sRes, tRes] = await Promise.all([
+      const [mRes, sRes, tRes, stdRes] = await Promise.all([
         axios.get(`${API}/matches`),
         axios.get(`${API}/league-standings`),
-        axios.get(`${API}/teams`)
+        axios.get(`${API}/teams`),
+        axios.get(`${API}/students`)
       ]);
       setMatches(mRes.data || []);
       setStandings(sRes.data || []);
       setTeams(tRes.data || []);
+      
+      const stdMap = {};
+      (stdRes.data || []).forEach(s => { stdMap[s.id] = s; });
+      setStudents(stdMap);
     } catch (err) {
       console.error("League data error:", err);
     } finally {
@@ -46,7 +52,7 @@ function SportsLeaguePage() {
     <div className="min-h-screen bg-[#070b14] text-white p-6 pb-24" dir="rtl">
       {/* Header (Image 5 Style) */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-black italic tracking-tighter uppercase">Ghiras League</h1>
+        <h1 className="text-2xl font-black italic tracking-tighter uppercase">Ghiras Football</h1>
         <div className="bg-[#006d44]/20 border border-[#006d44]/50 px-4 py-1 rounded-full flex items-center gap-2">
             <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
             <span className="text-[10px] font-bold text-[#006d44] uppercase">Live Now</span>
@@ -56,18 +62,22 @@ function SportsLeaguePage() {
       {/* Tournaments Scrolling (Image 5 Top Circles) */}
       <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar mb-8">
         {[
-          { icon: "🏆", label: "البطولات" },
-          { icon: "⚽", label: "المباريات" },
-          { icon: "🛡️", label: "الفرق" },
-          { icon: "🏅", label: "الجوائز" },
-          { icon: "📊", label: "الإحصائيات" }
+          { icon: "🏆", label: "البطولات", tab: "ranking" },
+          { icon: "⚽", label: "المباريات", tab: "results" },
+          { icon: "🛡️", label: "الفرق", tab: "teams" },
+          { icon: "🏅", label: "الجوائز", tab: "ranking" },
+          { icon: "📊", label: "الإحصائيات", tab: "ranking" }
         ].map((item, idx) => (
-          <div key={idx} className="flex flex-col items-center gap-2 min-w-[70px]">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#1a1f2e] to-[#0d1117] border-2 border-[#006d44]/40 flex items-center justify-center text-2xl shadow-lg ring-4 ring-[#006d44]/5">
+          <button 
+            key={idx} 
+            onClick={() => setActiveTab(item.tab)}
+            className="flex flex-col items-center gap-2 min-w-[70px] group outline-none"
+          >
+            <div className={`w-16 h-16 rounded-full bg-gradient-to-br from-[#1a1f2e] to-[#0d1117] border-2 flex items-center justify-center text-2xl shadow-lg ring-4 ring-[#006d44]/5 transition-all group-hover:scale-110 active:scale-95 ${activeTab === item.tab ? "border-[#006d44] scale-105" : "border-[#006d44]/40"}`}>
               {item.icon}
             </div>
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{item.label}</span>
-          </div>
+            <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${activeTab === item.tab ? "text-[#006d44]" : "text-gray-400 group-hover:text-white"}`}>{item.label}</span>
+          </button>
         ))}
       </div>
 
@@ -84,7 +94,7 @@ function SportsLeaguePage() {
             <span className="bg-[#006d44] text-[10px] font-black px-3 py-1 rounded-full">FINAL ROUND</span>
             <span className="text-gray-300 text-[10px] font-bold italic uppercase">Ghiras Stadium</span>
           </div>
-          <h2 className="text-3xl font-black italic uppercase leading-none mb-1">Ramadan Cup 2026</h2>
+          <h2 className="text-3xl font-black italic uppercase leading-none mb-1">Football League 2026</h2>
           <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Master of the Pitch Tournament</p>
         </div>
       </div>
@@ -151,28 +161,69 @@ function SportsLeaguePage() {
                   <img src={t.group_photo.startsWith('data:') ? t.group_photo : `${API_BASE}${t.group_photo}`} alt="Team" className="w-full aspect-video object-cover rounded-xl shadow-md border-2 border-[#006d44]/30 mb-6" />
                 )}
                 
-                <div className="relative aspect-[4/5] bg-gradient-to-t from-[#004e31] to-[#014029] rounded-3xl overflow-hidden border-2 border-white/20 shadow-inner">
-                  {/* Field Markings */}
-                  <div className="absolute inset-4 border-2 border-white/30 pointer-events-none"></div>
-                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/30"></div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full"></div>
-                  <div className="absolute top-4 left-1/2 -translate-x-1/2 w-40 h-20 border-2 border-white/30"></div>
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-40 h-20 border-2 border-white/30"></div>
+                <div className="relative aspect-[4/5] bg-[#1a4a1a] rounded-3xl overflow-hidden border-[6px] border-[#003d24] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                  {/* Realistic Pitch Layer */}
+                  <div className="absolute inset-0 opacity-40 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]"></div>
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#1a4a1a] via-[#2a5a2a] to-[#1a4a1a]"></div>
                   
-                  {/* Players */}
-                  <div className="absolute inset-0">
-                    {t.lineup && t.lineup.map(player => (
-                      <div
-                        key={player.student_id}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 h-10 w-10 flex flex-col items-center justify-center pointer-events-none"
-                        style={{ left: `${player.x}%`, top: `${player.y}%` }}
-                      >
-                        <div className="w-8 h-8 bg-white rounded-full shadow-lg border-2 border-[#006d44] flex items-center justify-center text-[#006d44] font-black text-xs mb-1">
-                          {player.name.charAt(0)}
-                        </div>
-                        <span className="text-[9px] font-bold bg-black/60 px-2 py-0.5 rounded text-white whitespace-nowrap">{player.name}</span>
-                      </div>
+                  {/* Grass Stripes Pattern */}
+                  <div className="absolute inset-0 flex flex-col">
+                    {[...Array(10)].map((_, i) => (
+                      <div key={i} className={`flex-1 ${i % 2 === 0 ? 'bg-black/5' : 'bg-transparent'}`}></div>
                     ))}
+                  </div>
+
+                  {/* Field Markings - Professional Style */}
+                  <div className="absolute inset-6 border-4 border-white/40 pointer-events-none"></div>
+                  <div className="absolute top-1/2 left-0 right-0 h-1 bg-white/40 shadow-sm"></div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-4 border-white/40 rounded-full shadow-sm"></div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white/60 rounded-full shadow-md"></div>
+                  
+                  {/* Goal Areas */}
+                  <div className="absolute top-6 left-1/2 -translate-x-1/2 w-48 h-24 border-4 border-white/40 border-t-0 bg-white/5 shadow-inner"></div>
+                  <div className="absolute top-6 left-1/2 -translate-x-1/2 w-24 h-12 border-4 border-white/40 border-t-0"></div>
+                  
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-48 h-24 border-4 border-white/40 border-b-0 bg-white/5 shadow-inner"></div>
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-24 h-12 border-4 border-white/40 border-b-0"></div>
+                  
+                  {/* Penalty Spots */}
+                  <div className="absolute top-24 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white/60 rounded-full shadow-md"></div>
+                  <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white/60 rounded-full shadow-md"></div>
+                  
+                  {/* Corners */}
+                  <div className="absolute top-6 left-6 w-8 h-8 border-l-4 border-t-4 border-white/40 rounded-tl-full"></div>
+                  <div className="absolute top-6 right-6 w-8 h-8 border-r-4 border-t-4 border-white/40 rounded-tr-full"></div>
+                  <div className="absolute bottom-6 left-6 w-8 h-8 border-l-4 border-b-4 border-white/40 rounded-bl-full"></div>
+                  <div className="absolute bottom-6 right-6 w-8 h-8 border-r-4 border-b-4 border-white/40 rounded-br-full"></div>
+                  
+                  {/* Players (Large & Elegant) */}
+                  <div className="absolute inset-0">
+                    {t.lineup && t.lineup.map(player => {
+                      const stdInfo = students[player.student_id] || {};
+                      return (
+                        <div
+                          key={player.student_id}
+                          className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group cursor-pointer active:scale-95 transition-transform"
+                          style={{ left: `${player.x}%`, top: `${player.y}%` }}
+                        >
+                          <div className="relative">
+                            <div className="w-16 h-16 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-white ring-4 ring-[#006d44]/30">
+                              <img 
+                                src={stdInfo.image_url ? (stdInfo.image_url.startsWith('data:') ? stdInfo.image_url : `${API_BASE}${stdInfo.image_url}`) : "https://cdn-icons-png.flaticon.com/512/1144/1144760.png"} 
+                                className="w-full h-full object-cover" 
+                                alt={player.name}
+                              />
+                            </div>
+                            <div className="absolute -top-1 -right-1 w-7 h-7 bg-yellow-400 rounded-full flex items-center justify-center text-[10px] font-black text-black border-2 border-white shadow-lg">
+                              {stdInfo.points || 0}
+                            </div>
+                          </div>
+                          <p className="mt-1.5 px-3 py-0.5 bg-black/80 backdrop-blur-md text-[10px] font-black text-white rounded-full border border-white/20 shadow-lg whitespace-nowrap uppercase tracking-tighter">
+                            {player.name}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

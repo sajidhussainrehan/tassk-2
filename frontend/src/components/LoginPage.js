@@ -16,6 +16,7 @@ function LoginPage({ onLogin }) {
     try {
       const res = await axios.post(`${API}/auth/login`, { username, password });
       localStorage.setItem("ghiras_token", res.data.token);
+      localStorage.setItem("adminToken", res.data.token);
       onLogin(res.data.token);
     } catch (err) {
       setError(err.response?.data?.detail || "خطأ في تسجيل الدخول");
