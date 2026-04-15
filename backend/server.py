@@ -338,6 +338,34 @@ class HalaqaGradeCreate(BaseModel):
 
 # ==================== Student Endpoints ====================
 
+@api_router.put("/students/bulk-points")
+async def bulk_add_points(data: BulkPointsUpdate):
+    """Add/deduct points for all students in a group. Must be defined before {student_id} routes."""
+    import re
+    group_pattern = re.compile(f"^{re.escape(data.group.strip())}$", re.IGNORECASE)
+    
+    students = await db.students.find({"supervisor": group_pattern}, {"_id": 0}).to_list(1000)
+    
+    if len(students) == 0:
+        # Fallback to simple matching if regex finds nothing
+        students = await db.students.find({"supervisor": data.group}, {"_id": 0}).to_list(1000)
+    
+    if len(students) == 0:
+        raise HTTPException(status_code=404, detail=f"لا يوجد طلاب في المجموعة: {data.group}")
+    
+    for student in students:
+        await db.students.update_one({"id": student["id"]}, {"$inc": {"points": data.points}})
+        log_entry = {
+            "id": str(uuid.uuid4()),
+            "student_id": student["id"],
+            "points": data.points,
+            "reason": data.reason,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.points_log.insert_one(log_entry)
+    
+    return {"success": True, "count": len(students)}
+
 @api_router.get("/students", response_model=List[Student])
 async def get_students():
     students = await db.students.find({}, {"_id": 0}).to_list(1000)
@@ -451,33 +479,6 @@ async def add_points(student_id: str, data: PointsUpdate):
     
     return {"success": True}
 
-@api_router.put("/students/bulk-points")
-async def bulk_add_points(data: BulkPointsUpdate):
-    # Use regex for case-insensitive and robust matching of group/supervisor
-    import re
-    group_pattern = re.compile(f"^{re.escape(data.group.strip())}$", re.IGNORECASE)
-    
-    students = await db.students.find({"supervisor": group_pattern}, {"_id": 0}).to_list(1000)
-    
-    if len(students) == 0:
-        # Fallback to simple matching if regex finds nothing, just in case
-        students = await db.students.find({"supervisor": data.group}, {"_id": 0}).to_list(1000)
-    
-    if len(students) == 0:
-        raise HTTPException(status_code=404, detail=f"لا يوجد طلاب في المجموعة: {data.group}")
-    
-    for student in students:
-        await db.students.update_one({"id": student["id"]}, {"$inc": {"points": data.points}})
-        log_entry = {
-            "id": str(uuid.uuid4()),
-            "student_id": student["id"],
-            "points": data.points,
-            "reason": data.reason,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.points_log.insert_one(log_entry)
-    
-    return {"success": True, "count": len(students)}
 
 @api_router.get("/students/rankings")
 async def get_student_rankings():
