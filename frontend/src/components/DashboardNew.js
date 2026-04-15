@@ -190,7 +190,7 @@ function Dashboard({ onLogout }) {
     { id: "groups", label: "المجموعات", icon: "🏅" },
     { id: "students", label: "الطلاب", icon: "👥" },
     { id: "attendance", label: "الحضور", icon: "📱" },
-    { id: "tasks", label: "المهام", icon: "📋" },
+    { id: "tasks", label: "المبادرات", icon: "🚀" },
     { id: "league", label: "الدوري", icon: "⚽" },
     { id: "teams", label: "تشكيلات الفرق", icon: "🛡️" },
     { id: "star", label: "نجم الدوري", icon: "⭐" },

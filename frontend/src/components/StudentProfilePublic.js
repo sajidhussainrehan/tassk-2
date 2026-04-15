@@ -283,7 +283,7 @@ function StudentProfilePublic() {
       {/* Fixed Bottom Bar (Image 3/4 nav) */}
       <div className="fixed bottom-6 left-6 right-6 z-[100]">
         <div className="bg-white/90 backdrop-blur-xl rounded-[2.5rem] border-2 border-emerald-50 p-2 shadow-2xl flex items-center justify-between overflow-hidden">
-          <Link to="/" className="flex-1 flex flex-col items-center gap-1 py-2 text-[#006d44]">
+          <Link to={`/public/${student.id}`} className="flex-1 flex flex-col items-center gap-1 py-2 text-[#006d44]">
             <span className="text-lg">🏠</span>
             <span className="text-[8px] font-black uppercase tracking-tighter underline underline-offset-4">Home</span>
           </Link>

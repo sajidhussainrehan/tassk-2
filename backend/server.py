@@ -67,6 +67,47 @@ class TeacherUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
 
+# ==================== Tasks Models ====================
+class Task(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    group: str
+    description: str
+    points: int
+    status: str = "active"  # active, completed, awaiting_approval
+    claimed_by: Optional[str] = None
+    claimed_by_name: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    expires_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=7))
+
+class TaskCreate(BaseModel):
+    group: str
+    description: str
+    points: int
+
+# ==================== Challenges Models ====================
+class Challenge(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    question: str
+    options: List[str]
+    correct_answer: int
+    points: int
+    active: bool = True
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ChallengeCreate(BaseModel):
+    question: str
+    options: List[str]
+    correct_answer: int
+    points: int
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+
+class ChallengeAnswerRequest(BaseModel):
+    answer: int
+    student_name: str
+
 # Authentication credentials from environment variables
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
@@ -368,8 +409,10 @@ async def bulk_add_points(data: BulkPointsUpdate):
 
 @api_router.get("/students", response_model=List[Student])
 async def get_students():
-    students = await db.students.find({}, {"_id": 0}).to_list(1000)
+    """Retrieve all students sorted by points. Excludes image_url for performance (large base64)."""
+    students = await db.students.find({}, {"_id": 0, "image_url": 0}).to_list(1000)
     for s in students:
+
         if isinstance(s.get("created_at"), str):
             s["created_at"] = datetime.fromisoformat(s["created_at"])
     students.sort(key=lambda x: x["points"], reverse=True)
@@ -534,6 +577,29 @@ async def create_group(data: GroupCreate):
     doc["created_at"] = doc["created_at"].isoformat()
     await db.groups.insert_one(doc)
     return group
+@api_router.get("/students/{student_id}/profile")
+async def get_student_profile(student_id: str):
+    # Get all students to calculate rank (no images for speed)
+    all_students = await db.students.find({}, {"_id": 0, "image_url": 0}).to_list(1000)
+    all_students.sort(key=lambda x: x.get("points", 0), reverse=True)
+    
+    # Find student
+    student = await db.students.find_one({"id": student_id}, {"_id": 0})
+    if not student:
+        raise HTTPException(status_code=404, detail="غير موجود")
+    
+    # Calculate rank (1-based index)
+    rank = None
+    for i, s in enumerate(all_students):
+        if s.get("id") == student_id:
+            rank = i + 1
+            break
+    
+    return {
+        "student": student,
+        "rank": rank,
+        "total_students": len(all_students)
+    }
 
 @api_router.put("/groups/{group_id}", response_model=Group)
 async def update_group(group_id: str, data: GroupCreate):
