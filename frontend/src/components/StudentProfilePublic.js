@@ -10,6 +10,7 @@ const API = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
 function StudentProfilePublic() {
   const { studentId: paramId } = useParams();
   const [student, setStudent] = useState(null);
+  const [rankInfo, setRankInfo] = useState({ rank: 0, total: 0 });
   const [upcomingMatches, setUpcomingMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
@@ -17,11 +18,12 @@ function StudentProfilePublic() {
   const fetchStudent = useCallback(async () => {
     try {
       setLoading(true);
-      const [studentRes, matchesRes] = await Promise.all([
-        axios.get(`${API}/students/${paramId}`),
+      const [profileRes, matchesRes] = await Promise.all([
+        axios.get(`${API}/students/${paramId}/profile`),
         axios.get(`${API}/matches/upcoming`).catch(() => ({ data: [] }))
       ]);
-      setStudent(studentRes.data);
+      setStudent(profileRes.data.student);
+      setRankInfo({ rank: profileRes.data.rank, total: profileRes.data.total_students });
       setUpcomingMatches(matchesRes.data || []);
     } catch (err) {
       console.error("Error fetching student:", err);
@@ -78,7 +80,7 @@ function StudentProfilePublic() {
           <div className="relative">
             <div className="w-32 h-32 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-white">
               <img 
-                src={student.image_url ? `${API_BASE}${student.image_url}` : "https://cdn-icons-png.flaticon.com/512/1144/1144760.png"} 
+                src={student.image_url ? (student.image_url.startsWith('data:') ? student.image_url : `${API_BASE}${student.image_url}`) : "https://cdn-icons-png.flaticon.com/512/1144/1144760.png"} 
                 className="w-full h-full object-cover" 
                 alt={student.name} 
               />
@@ -122,9 +124,7 @@ function StudentProfilePublic() {
           <div className="absolute top-0 right-0 w-40 h-40 bg-[#006d44]/10 rounded-full -mr-20 -mt-20"></div>
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2 italic">Ghiras Rank</p>
-              <h4 className="text-4xl font-black uppercase italic leading-none mb-1">Elite Master</h4>
-              <p className="text-gray-500 text-[10px] font-bold tracking-widest">RANK 12 ON GLOBAL LEADERBOARD</p>
+              <p className="text-gray-500 text-[10px] font-bold tracking-widest uppercase">Rank #{rankInfo.rank} of {rankInfo.total} on Global Leaderboard</p>
             </div>
             <div className="w-24 h-24 rounded-full bg-[#006d44] flex flex-col items-center justify-center border-8 border-[#252a3a] shadow-xl">
               <span className="text-2xl font-black leading-none">80</span>
