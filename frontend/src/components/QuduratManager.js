@@ -26,12 +26,6 @@ function QuduratManager() {
     status: "approved"
   });
 
-  const [editReviewData, setEditReviewData] = useState({
-    submission_id: null,
-    points: 0,
-    status: "approved"
-  });
-
   const fetchData = async () => {
     try {
       const [itemsRes, subsRes] = await Promise.all([
@@ -123,24 +117,6 @@ function QuduratManager() {
       await fetchData();
     } catch (error) {
       showMsg("خطأ في الحذف");
-    }
-  };
-
-  const submitEditReview = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await axios.put(`${API}/qudurat/submissions/${editReviewData.submission_id}/edit-review`, {
-        points: editReviewData.points,
-        status: editReviewData.status
-      });
-      showMsg("✅ تم تعديل التقييم بنجاح");
-      setEditReviewData({ submission_id: null, points: 0, status: "approved" });
-      await fetchData();
-    } catch (error) {
-      showMsg("خطأ في تعديل التقييم");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -313,76 +289,14 @@ function QuduratManager() {
                       </div>
                     </form>
                   ) : (
-                    <div className="space-y-3 w-full">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-400 text-sm italic font-medium">✨ هذا التلخيص تمت مراجعته مسبقاً</span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setEditReviewData({ submission_id: sub.id, points: sub.points_summary_awarded || 0, status: sub.status })}
-                            className="text-blue-600 hover:text-blue-800 font-bold text-sm bg-blue-50 px-3 py-1 rounded-lg border border-blue-200"
-                          >
-                            ✏️ تعديل الدرجة
-                          </button>
-                          <button
-                            onClick={() => deleteSubmission(sub.id)}
-                            className="text-red-500 hover:text-red-700 font-bold text-sm bg-red-50 px-3 py-1 rounded-lg border border-red-200"
-                          >
-                            🗑️ حذف للأبد
-                          </button>
-                        </div>
-                      </div>
-                      {editReviewData.submission_id === sub.id && (
-                        <form onSubmit={submitEditReview} className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200 space-y-3">
-                          <h4 className="font-bold text-blue-700 text-sm">✏️ تعديل تقييم التلخيص</h4>
-                          <div>
-                            <label className="block text-xs font-bold mb-1 text-gray-500">النقاط الجديدة (كحد أقصى {items.find(it => it.id === sub.qudurat_id)?.points_summary || 0})</label>
-                            <input
-                              type="number"
-                              value={editReviewData.points}
-                              onChange={(e) => setEditReviewData({ ...editReviewData, points: parseInt(e.target.value) || 0 })}
-                              className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                              placeholder="أدخل عدد النقاط الجديد"
-                              required
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="submit"
-                              disabled={loading}
-                              onClick={() => setEditReviewData({...editReviewData, status: "approved"})}
-                              className="bg-green-500 text-white px-4 py-2 rounded-lg font-bold disabled:opacity-50 text-sm"
-                            >
-                              ✅ قبول بالدرجة الجديدة
-                            </button>
-                            <button
-                              type="button"
-                              disabled={loading}
-                              onClick={() => {
-                                setEditReviewData({...editReviewData, status: "rejected", points: 0});
-                                (async () => {
-                                  setLoading(true);
-                                  try {
-                                    await axios.put(`${API}/qudurat/submissions/${sub.id}/edit-review`, { points: 0, status: "rejected" });
-                                    showMsg("تم تعديل التقييم إلى مرفوض");
-                                    setEditReviewData({ submission_id: null, points: 0, status: "approved" });
-                                    fetchData();
-                                  } catch (e) { showMsg("خطأ"); } finally { setLoading(false); }
-                                })();
-                              }}
-                              className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold disabled:opacity-50 text-sm"
-                            >
-                              ❌ رفض
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditReviewData({ submission_id: null, points: 0, status: "approved" })}
-                              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm"
-                            >
-                              إلغاء
-                            </button>
-                          </div>
-                        </form>
-                      )}
+                    <div className="flex justify-between w-full items-center">
+                       <span className="text-gray-400 text-sm italic font-medium">✨ هذا التلخيص تمت مراجعته مسبقاً</span>
+                       <button
+                         onClick={() => deleteSubmission(sub.id)}
+                         className="text-red-500 hover:text-red-700 font-bold text-sm bg-red-50 px-3 py-1 rounded-lg border border-red-200"
+                       >
+                         🗑️ حذف للأبد
+                       </button>
                     </div>
                   )}
                 </div>

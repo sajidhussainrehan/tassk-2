@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-const API_BASE = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
-const API = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 function FootballLeague({ supervisors }) {
   const [matches, setMatches] = useState([]);
@@ -23,8 +22,8 @@ function FootballLeague({ supervisors }) {
         axios.get(`${API}/matches`),
         axios.get(`${API}/league-standings`)
       ]);
-      setMatches(matchRes.data || []);
-      setStandings(standRes.data || []);
+      setMatches(matchRes.data);
+      setStandings(standRes.data);
     } catch (err) { console.error(err); }
   };
 
@@ -32,16 +31,16 @@ function FootballLeague({ supervisors }) {
 
   const addMatch = async (e) => {
     e.preventDefault();
-    if (team1 === team2) { setMessage("❌ لا يمكن اختيار نفس الفريق"); return; }
+    if (team1 === team2) { setMessage("لا يمكن اختيار نفس الفريق"); return; }
     setLoading(true);
     try {
       await axios.post(`${API}/matches`, { team1, team2 });
       setShowAddMatch(false);
       setTeam1(""); setTeam2("");
-      setMessage("✅ تم جدولة المباراة بنجاح");
+      setMessage("تمت جدولة المباراة");
       await fetchData();
     } catch (err) {
-      setMessage("❌ خطأ في إضافة المباراة");
+      setMessage("خطأ في إضافة المباراة");
     } finally { setLoading(false); }
   };
 
@@ -52,10 +51,10 @@ function FootballLeague({ supervisors }) {
       await axios.put(`${API}/matches/${showScoreModal.id}/score`, { score1, score2 });
       setShowScoreModal(null);
       setScore1(0); setScore2(0);
-      setMessage("✅ تم تحديث النتيجة بنجاح");
+      setMessage("تم تحديث النتيجة");
       await fetchData();
     } catch (err) {
-      setMessage("❌ خطأ في تحديث النتيجة");
+      setMessage("خطأ في تحديث النتيجة");
     } finally { setLoading(false); }
   };
 
@@ -79,172 +78,173 @@ function FootballLeague({ supervisors }) {
   const playedMatches = matches.filter(m => m.status === "completed");
 
   return (
-    <div className="space-y-6">
-      {message && (
-        <div className={`p-4 rounded-2xl text-center font-bold animate-fadeIn shadow-lg ${message.startsWith('✅') ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-            {message}
-        </div>
-      )}
+    <div className="space-y-4">
+      {message && <div className="bg-green-100 text-green-700 p-3 rounded-lg text-center font-semibold">{message}</div>}
 
       {/* Tabs */}
-      <div className="flex gap-3 bg-white/50 p-1.5 rounded-2xl shadow-inner border border-gray-100">
-        <button onClick={() => setActiveTab("standings")} className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${activeTab === "standings" ? "bg-[#006d44] text-white shadow-lg" : "text-gray-500 hover:bg-gray-100"}`}>🏆 الترتيب</button>
-        <button onClick={() => setActiveTab("pending")} className={`flex-1 py-3 rounded-xl font-black text-sm transition-all relative ${activeTab === "pending" ? "bg-[#006d44] text-white shadow-lg" : "text-gray-500 hover:bg-gray-100"}`}>
-            📅 القادمة
-            {pendingMatches.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center border-2 border-white">{pendingMatches.length}</span>}
+      <div className="flex gap-2">
+        <button onClick={() => setActiveTab("standings")} className={`flex-1 py-2 rounded-lg font-bold text-sm ${activeTab === "standings" ? "bg-green-600 text-white" : "bg-white text-gray-600 shadow"}`}>🏆 جدول الترتيب</button>
+        <button onClick={() => setActiveTab("pending")} className={`flex-1 py-2 rounded-lg font-bold text-sm relative ${activeTab === "pending" ? "bg-blue-600 text-white" : "bg-white text-gray-600 shadow"}`}>
+          📅 المباريات القادمة
+          {pendingMatches.length > 0 && <span className="absolute -top-1 -left-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">{pendingMatches.length}</span>}
         </button>
-        <button onClick={() => setActiveTab("played")} className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${activeTab === "played" ? "bg-[#006d44] text-white shadow-lg" : "text-gray-500 hover:bg-gray-100"}`}>📊 النتائج</button>
+        <button onClick={() => setActiveTab("played")} className={`flex-1 py-2 rounded-lg font-bold text-sm ${activeTab === "played" ? "bg-gray-600 text-white" : "bg-white text-gray-600 shadow"}`}>📊 النتائج</button>
       </div>
 
-      <button onClick={() => setShowAddMatch(true)} className="w-full bg-[#006d44] hover:bg-[#004e31] text-white py-4 rounded-2xl font-black shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2">
-        <span className="text-xl">⚽</span>
-        جدولة مباراة جديدة
+      <button onClick={() => setShowAddMatch(true)} className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-bold text-sm" data-testid="add-match-btn">
+        ⚽ جدولة مباراة جديدة
       </button>
 
-      {/* Standings */}
+      {/* Standings Tab */}
       {activeTab === "standings" && (
-        <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-100 overflow-hidden border border-gray-50 animate-fadeIn">
-          <div className="bg-gradient-to-r from-[#006d44] to-[#014029] text-white p-6">
-            <h2 className="font-black text-center text-lg italic uppercase tracking-wider">League Standings</h2>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-3">
+            <h2 className="font-bold text-center">⚽ جدول الدوري</h2>
           </div>
           {standings.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-100">
-                    <th className="p-4 text-center font-black text-gray-400 text-xs text-right">#</th>
-                    <th className="p-4 text-right font-black text-gray-400 text-xs">الفريق</th>
-                    <th className="p-4 text-center font-black text-gray-400 text-xs">لعب</th>
-                    <th className="p-4 text-center font-black text-gray-400 text-xs">فاز</th>
-                    <th className="p-4 text-center font-black text-gray-400 text-xs">خسر</th>
-                    <th className="p-4 text-center font-black text-[#006d44] text-xs">نقاط</th>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-2">#</th>
+                    <th className="p-2 text-right">الفريق</th>
+                    <th className="p-2">لعب</th>
+                    <th className="p-2">فاز</th>
+                    <th className="p-2">تعادل</th>
+                    <th className="p-2">خسر</th>
+                    <th className="p-2 font-bold">النقاط</th>
                   </tr>
                 </thead>
                 <tbody>
                   {standings.map((t, i) => (
-                    <tr key={t.team} className={`border-b border-gray-50 transition-colors hover:bg-emerald-50/30 ${i === 0 ? "bg-emerald-50/50" : ""}`}>
-                      <td className="p-4 text-center">
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${i === 0 ? "bg-yellow-400 text-white" : "text-gray-400 bg-gray-100"}`}>
-                            {i === 0 ? "🥇" : i + 1}
-                        </span>
-                      </td>
-                      <td className="p-4 font-black text-gray-800">{t.team}</td>
-                      <td className="p-4 text-center font-bold text-gray-500">{t.played}</td>
-                      <td className="p-4 text-center font-black text-emerald-600">{t.wins || 0}</td>
-                      <td className="p-4 text-center font-black text-red-500">{t.losses || 0}</td>
-                      <td className="p-4 text-center">
-                        <span className="font-black text-lg text-[#006d44]">{t.points}</span>
-                      </td>
+                    <tr key={t.team} className={i === 0 ? "bg-yellow-50 font-bold" : i % 2 === 0 ? "bg-gray-50" : ""}>
+                      <td className="p-2 text-center">{i === 0 ? "🥇" : i + 1}</td>
+                      <td className="p-2 font-semibold">{t.team}</td>
+                      <td className="p-2 text-center">{t.played}</td>
+                      <td className="px-2 py-3 text-center font-bold text-green-600">{t.wins || 0}</td>
+                      <td className="px-2 py-3 text-center font-bold text-gray-600">{t.draws || 0}</td>
+                      <td className="px-2 py-3 text-center font-bold text-red-600">{t.losses || 0}</td>
+                      <td className="p-2 text-center font-bold text-green-600 text-lg">{t.points}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <div className="p-12 text-center text-gray-400 font-bold italic">No data yet</div>
+            <div className="p-8 text-center text-gray-500">لا توجد نتائج بعد</div>
           )}
         </div>
       )}
 
-      {/* Pending Matches */}
+      {/* Pending Matches Tab */}
       {activeTab === "pending" && (
-        <div className="space-y-4 animate-fadeIn">
-          {pendingMatches.map(m => (
-            <div key={m.id} className="bg-white rounded-3xl p-6 shadow-md border-r-8 border-[#006d44] group hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 flex items-center justify-center gap-4">
-                  <span className="font-black text-gray-800 text-center flex-1">{m.team1}</span>
-                  <div className="bg-emerald-50 text-[#006d44] px-4 py-2 rounded-2xl font-black italic text-xs border border-emerald-100">VS</div>
-                  <span className="font-black text-gray-800 text-center flex-1">{m.team2}</span>
+        <div className="space-y-3">
+          {pendingMatches.length > 0 ? pendingMatches.map(m => (
+            <div key={m.id} className="bg-white rounded-xl shadow p-4 border-r-4 border-blue-500">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 flex items-center justify-center gap-3">
+                  <span className="font-bold text-gray-800 text-sm">{m.team1}</span>
+                  <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg font-bold text-sm">⚡ VS</span>
+                  <span className="font-bold text-gray-800 text-sm">{m.team2}</span>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => openScoreModal(m)} className="bg-[#006d44] text-white p-3 rounded-xl font-black text-xs shadow-md transition-all active:scale-95">النتيجة</button>
-                  <button onClick={() => deleteMatch(m.id)} className="text-red-300 hover:text-red-500 p-2">✕</button>
+                  <button onClick={() => openScoreModal(m)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-bold" data-testid={`score-btn-${m.id}`}>
+                    إدخال النتيجة
+                  </button>
+                  <button onClick={() => deleteMatch(m.id)} className="text-red-400 hover:text-red-600 text-lg">&#10005;</button>
                 </div>
               </div>
             </div>
-          ))}
-          {pendingMatches.length === 0 && <div className="text-center py-20 text-gray-300 font-black italic">لا يوجد مباريات مجدولة</div>}
+          )) : (
+            <div className="text-center py-8 text-gray-500">لا توجد مباريات قادمة</div>
+          )}
         </div>
       )}
 
-      {/* Results */}
+      {/* Played Matches Tab */}
       {activeTab === "played" && (
-        <div className="space-y-4 animate-fadeIn">
-          {playedMatches.map(m => (
-            <div key={m.id} className="bg-white rounded-3xl p-8 shadow-md border-r-8 border-gray-400 group hover:shadow-lg transition-all">
+        <div className="space-y-3">
+          {playedMatches.length > 0 ? playedMatches.map(m => (
+            <div key={m.id} className="bg-white rounded-xl shadow p-4 border-r-4 border-green-500">
               <div className="flex items-center justify-between">
-                <div className="flex-1 text-center font-black text-gray-800">{m.team1}</div>
-                <div className="px-8 flex items-center gap-4">
-                    <span className={`text-4xl font-black italic ${m.score1 > m.score2 ? 'text-emerald-600' : 'text-gray-800'}`}>{m.score1}</span>
-                    <span className="w-px h-10 bg-gray-100"></span>
-                    <span className={`text-4xl font-black italic ${m.score2 > m.score1 ? 'text-emerald-600' : 'text-gray-800'}`}>{m.score2}</span>
+                <div className="flex-1 flex items-center justify-center gap-3">
+                  <span className={`font-bold text-sm ${m.score1 > m.score2 ? "text-green-600" : m.score1 < m.score2 ? "text-red-600" : "text-gray-800"}`}>{m.team1}</span>
+                  <span className="bg-green-600 text-white px-3 py-1 rounded-lg font-bold min-w-[70px] text-center text-sm">
+                    {m.score1} - {m.score2}
+                  </span>
+                  <span className={`font-bold text-sm ${m.score2 > m.score1 ? "text-green-600" : m.score2 < m.score1 ? "text-red-600" : "text-gray-800"}`}>{m.team2}</span>
                 </div>
-                <div className="flex-1 text-center font-black text-gray-800">{m.team2}</div>
-                <div className="mr-6 flex gap-2">
-                    <button onClick={() => openScoreModal(m)} className="text-gray-300 hover:text-gray-600">تعديل</button>
-                    <button onClick={() => deleteMatch(m.id)} className="text-red-200 hover:text-red-400">✕</button>
+                <div className="flex gap-2">
+                  <button onClick={() => openScoreModal(m)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded text-xs font-semibold">تعديل</button>
+                  <button onClick={() => deleteMatch(m.id)} className="text-red-400 hover:text-red-600 text-sm">&#10005;</button>
                 </div>
               </div>
             </div>
-          ))}
-          {playedMatches.length === 0 && <div className="text-center py-20 text-gray-300 font-black italic">No results yet</div>}
-        </div>
-      )}
-
-      {/* Score Modal */}
-      {showScoreModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-6 animate-fadeIn" onClick={() => setShowScoreModal(null)}>
-          <div className="bg-white rounded-[3rem] p-10 w-full max-w-lg shadow-2xl relative" onClick={e => e.stopPropagation()} dir="rtl">
-            <button onClick={() => setShowScoreModal(null)} className="absolute top-8 left-8 text-gray-400 text-2xl">✕</button>
-            <h3 className="text-2xl font-black text-gray-800 mb-10 text-center">تحديث نتيجة المباراة</h3>
-            
-            <form onSubmit={updateScore} className="space-y-8">
-              <div className="flex items-center justify-center gap-10">
-                <div className="text-center flex-1">
-                    <p className="font-black text-gray-800 mb-4">{showScoreModal.team1}</p>
-                    <input type="number" value={score1} onChange={e => setScore1(parseInt(e.target.value))} className="w-24 h-24 text-center text-4xl font-black bg-gray-50 border-4 border-transparent focus:border-[#006d44] rounded-3xl outline-none transition-all shadow-inner" required />
-                </div>
-                <div className="font-black text-4xl text-gray-200 mt-10">VS</div>
-                <div className="text-center flex-1">
-                    <p className="font-black text-gray-800 mb-4">{showScoreModal.team2}</p>
-                    <input type="number" value={score2} onChange={e => setScore2(parseInt(e.target.value))} className="w-24 h-24 text-center text-4xl font-black bg-gray-50 border-4 border-transparent focus:border-[#006d44] rounded-3xl outline-none transition-all shadow-inner" required />
-                </div>
-              </div>
-              <button type="submit" disabled={loading} className="w-full bg-[#006d44] text-white py-5 rounded-2xl font-black shadow-xl shadow-emerald-200 hover:bg-[#004e31] transition-all active:scale-95 disabled:opacity-50">
-                  {loading ? 'جاري الحفظ...' : 'حفظ النتيجة النهائية'}
-              </button>
-            </form>
-          </div>
+          )) : (
+            <div className="text-center py-8 text-gray-500">لا توجد نتائج بعد</div>
+          )}
         </div>
       )}
 
       {/* Add Match Modal */}
       {showAddMatch && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-6 animate-fadeIn" onClick={() => setShowAddMatch(false)}>
-          <div className="bg-white rounded-[3rem] p-10 w-full max-w-lg shadow-2xl relative" onClick={e => e.stopPropagation()} dir="rtl">
-            <button onClick={() => setShowAddMatch(false)} className="absolute top-8 left-8 text-gray-400 text-2xl">✕</button>
-            <h3 className="text-2xl font-black text-gray-800 mb-8">جدولة مباراة جديدة</h3>
-            <form onSubmit={addMatch} className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-black text-gray-400 mb-2 mr-2 uppercase tracking-widest">الفريق الأول</label>
-                  <select value={team1} onChange={e => setTeam1(e.target.value)} className="w-full px-6 py-4 bg-gray-50 border-2 rounded-2xl focus:border-[#006d44] outline-none font-bold" required>
-                    <option value="">اختر الفريق</option>
-                    {supervisors.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddMatch(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()} dir="rtl">
+            <h3 className="text-xl font-bold mb-4">جدولة مباراة جديدة</h3>
+            <form onSubmit={addMatch} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1">الفريق الأول</label>
+                <select value={team1} onChange={e => setTeam1(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-green-500" required data-testid="match-team1">
+                  <option value="">اختر الفريق</option>
+                  {supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">الفريق الثاني</label>
+                <select value={team2} onChange={e => setTeam2(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-green-500" required data-testid="match-team2">
+                  <option value="">اختر الفريق</option>
+                  {supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-3">
+                <button type="submit" disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold disabled:opacity-50" data-testid="submit-match">
+                  {loading ? "جاري الحفظ..." : "جدولة المباراة"}
+                </button>
+                <button type="button" onClick={() => setShowAddMatch(false)} className="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold">إلغاء</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Score Modal */}
+      {showScoreModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowScoreModal(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()} dir="rtl">
+            <h3 className="text-lg font-bold mb-4 text-center">إدخال النتيجة</h3>
+            <div className="text-center mb-4">
+              <span className="font-bold text-gray-800">{showScoreModal.team1}</span>
+              <span className="mx-3 text-gray-400">VS</span>
+              <span className="font-bold text-gray-800">{showScoreModal.team2}</span>
+            </div>
+            <form onSubmit={updateScore} className="space-y-4">
+              <div className="flex gap-4 items-center">
+                <div className="flex-1 text-center">
+                  <label className="block text-xs font-semibold mb-1 text-gray-500">{showScoreModal.team1}</label>
+                  <input type="number" min="0" value={score1} onChange={e => setScore1(parseInt(e.target.value) || 0)} className="w-full px-3 py-3 border-2 rounded-lg text-center text-2xl font-bold focus:outline-none focus:border-green-500" data-testid="score-input-1" />
                 </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-400 mb-2 mr-2 uppercase tracking-widest">الفريق الثاني</label>
-                  <select value={team2} onChange={e => setTeam2(e.target.value)} className="w-full px-6 py-4 bg-gray-50 border-2 rounded-2xl focus:border-[#006d44] outline-none font-bold" required>
-                    <option value="">اختر الفريق</option>
-                    {supervisors.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                <span className="text-2xl font-bold text-gray-400 pt-4">-</span>
+                <div className="flex-1 text-center">
+                  <label className="block text-xs font-semibold mb-1 text-gray-500">{showScoreModal.team2}</label>
+                  <input type="number" min="0" value={score2} onChange={e => setScore2(parseInt(e.target.value) || 0)} className="w-full px-3 py-3 border-2 rounded-lg text-center text-2xl font-bold focus:outline-none focus:border-green-500" data-testid="score-input-2" />
                 </div>
               </div>
-              <button type="submit" disabled={loading} className="w-full bg-[#006d44] text-white py-5 rounded-2xl font-black shadow-xl shadow-emerald-200 transition-all active:scale-95">
-                  {loading ? 'جاري الجدولة...' : 'تأكيد جدولة المباراة'}
-              </button>
+              <div className="flex gap-3">
+                <button type="submit" disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold disabled:opacity-50" data-testid="submit-score">
+                  {loading ? "جاري الحفظ..." : "حفظ النتيجة"}
+                </button>
+                <button type="button" onClick={() => setShowScoreModal(null)} className="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold">إلغاء</button>
+              </div>
             </form>
           </div>
         </div>

@@ -6,8 +6,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const StudentAvatar = ({ student, size = "w-10 h-10", textSize = "text-sm" }) => {
   if (student.image_url) {
-    const src = student.image_url.startsWith('data:') ? student.image_url : `${process.env.REACT_APP_BACKEND_URL}${student.image_url}`;
-    return <img src={src} alt="" className={`${size} rounded-full object-cover border-2 border-white shadow-sm`} />;
+    return <img src={student.image_url} alt="" className={`${size} rounded-full object-cover border-2 border-white shadow-sm`} />;
   }
   return <div className={`${size} rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center ${textSize} font-bold text-white shadow-sm`}>{student.name?.charAt(0)}</div>;
 };
@@ -75,7 +74,7 @@ function ViewerPage({ token }) {
             <p className="text-3xl">⭐</p>
             <p className="text-sm opacity-80 mb-1">نجم الدوري</p>
             {leagueStar.image_url ? (
-              <img src={leagueStar.image_url.startsWith('data:') ? leagueStar.image_url : `${process.env.REACT_APP_BACKEND_URL}${leagueStar.image_url}`} alt="" className="w-20 h-20 rounded-full object-cover border-4 border-white/40 mx-auto shadow-lg" />
+              <img src={leagueStar.image_url} alt="" className="w-20 h-20 rounded-full object-cover border-4 border-white/40 mx-auto shadow-lg" />
             ) : (
               <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold mx-auto">{leagueStar.student_name?.charAt(0)}</div>
             )}

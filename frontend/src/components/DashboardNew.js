@@ -8,7 +8,6 @@ import TasksManager from "./TasksManager";
 import LeagueStarManager from "./LeagueStarManager";
 import ViewerLinksManager from "./ViewerLinksManager";
 import GroupsManager from "./GroupsManager";
-import TeamManager from "./TeamManager";
 import QuduratManager from "./QuduratManager";
 import AttendanceManager from "./AttendanceManager";
 import TeacherManagement from "./TeacherManagement";
@@ -16,12 +15,12 @@ import TeacherManagement from "./TeacherManagement";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const SUPERVISOR_COLORS = [
-  { bg: "bg-emerald-50", text: "text-[#006d44]", border: "border-[#006d44]/30", gradient: "from-[#006d44] to-[#014029]" },
-  { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-400/30", gradient: "from-blue-600 to-blue-800" },
-  { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-400/30", gradient: "from-purple-600 to-purple-800" },
-  { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-400/30", gradient: "from-orange-600 to-orange-800" },
-  { bg: "bg-pink-50", text: "text-pink-700", border: "border-pink-400/30", gradient: "from-pink-600 to-pink-800" },
-  { bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-400/30", gradient: "from-teal-600 to-teal-800" },
+  { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-400", gradient: "from-blue-500 to-blue-600" },
+  { bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-400", gradient: "from-emerald-500 to-emerald-600" },
+  { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-400", gradient: "from-purple-500 to-purple-600" },
+  { bg: "bg-orange-100", text: "text-orange-700", border: "border-orange-400", gradient: "from-orange-500 to-orange-600" },
+  { bg: "bg-pink-100", text: "text-pink-700", border: "border-pink-400", gradient: "from-pink-500 to-pink-600" },
+  { bg: "bg-teal-100", text: "text-teal-700", border: "border-teal-400", gradient: "from-teal-500 to-teal-600" },
 ];
 
 function Dashboard({ onLogout }) {
@@ -37,7 +36,6 @@ function Dashboard({ onLogout }) {
   const [leagueStar, setLeagueStar] = useState(null);
   const [showTeacherManagement, setShowTeacherManagement] = useState(false);
   const [teachers, setTeachers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Add student form
   const [newName, setNewName] = useState("");
@@ -190,37 +188,26 @@ function Dashboard({ onLogout }) {
     { id: "groups", label: "المجموعات", icon: "🏅" },
     { id: "students", label: "الطلاب", icon: "👥" },
     { id: "attendance", label: "الحضور", icon: "📱" },
-    { id: "tasks", label: "الاستثمارات", icon: "📈" },
+    { id: "tasks", label: "المهام", icon: "📋" },
     { id: "league", label: "الدوري", icon: "⚽" },
-    { id: "teams", label: "تشكيلات الفرق", icon: "🛡️" },
     { id: "star", label: "نجم الدوري", icon: "⭐" },
     { id: "viewers", label: "روابط المشاهدة", icon: "🔗" },
     { id: "qudurat", label: "القدرات", icon: "🍿" },
   ];
 
-  if (!localStorage.getItem("ghiras_token")) {
-    window.location.href = "/login";
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50" dir="rtl">
-      {/* Premium Glass Header */}
-      <div className="bg-[#006d44] text-white shadow-xl">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl shadow-inner backdrop-blur-sm border border-white/10">
-                🌿
-              </div>
-              <div>
-                <h1 className="text-2xl font-black italic tracking-tighter uppercase leading-none">Ghiras Dashboard</h1>
-                <p className="text-[10px] font-bold text-white/60 tracking-widest uppercase mt-1">Management Portal v4.0</p>
-              </div>
+      {/* Header */}
+      <div className="bg-gradient-to-r from-green-600 to-emerald-700 text-white py-4 shadow-lg">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">🌱 نادي غِراس</h1>
+              <p className="text-green-100 text-sm">🎯 لوحة تحكم المشرف</p>
             </div>
             <div className="flex gap-2">
-              <Link to="/challenges" className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold transition-all backdrop-blur-sm border border-white/10" data-testid="challenges-link">🏆 المنافسات</Link>
-              <button onClick={onLogout} className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold transition-all backdrop-blur-sm border border-white/10" data-testid="logout-btn">🚪 خروج</button>
+              <Link to="/challenges" className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold" data-testid="challenges-link">🏆 المنافسات</Link>
+              <button onClick={onLogout} className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold" data-testid="logout-btn">🚪 خروج</button>
             </div>
           </div>
         </div>
@@ -248,7 +235,6 @@ function Dashboard({ onLogout }) {
         </div>
       )}
 
-
       <div className="container mx-auto px-4 py-4">
         {/* Section Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide">
@@ -264,10 +250,6 @@ function Dashboard({ onLogout }) {
 
         {/* ===== Groups Section ===== */}
         {activeSection === "groups" && <GroupsManager onGroupsChange={(names) => setSupervisors(names)} />}
-
-        {/* ===== League & Teams Sections ===== */}
-        {activeSection === "league" && <FootballLeague supervisors={supervisors} />}
-        {activeSection === "teams" && <TeamManager groups={supervisors} students={students} />}
 
         {/* ===== Students Section ===== */}
         {activeSection === "students" && (
@@ -299,30 +281,19 @@ function Dashboard({ onLogout }) {
               </div>
             </div>
 
-            {/* Search */}
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="🔍 بحث عن طالب بالاسم..."
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 text-sm bg-white shadow-sm"
-                data-testid="student-search"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              )}
+            {/* Teacher Stats (Optional but helpful) */}
+            <div className="flex gap-2 flex-wrap mb-4">
+              <span className="text-sm font-bold text-gray-700">المعلمون النشطون:</span>
+              {[...new Set(students.map(s => s.teacher).filter(Boolean))].map(t => (
+                <span key={t} className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs">{t}</span>
+              ))}
+              {students.filter(s => s.teacher).length === 0 && <span className="text-xs text-gray-400">لا يوجد معلمون محددون</span>}
             </div>
 
             {/* Students by Group */}
             {supervisors.map((sup, si) => {
               const color = getColor(si);
-              const groupStudents = students.filter(s => s.supervisor === sup && (!searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase())));
+              const groupStudents = students.filter(s => s.supervisor === sup);
               return (
                 <div key={sup} className="bg-white rounded-xl shadow-lg overflow-hidden">
                   <div className={`bg-gradient-to-r ${color.gradient} text-white p-3 flex items-center justify-between`}>
@@ -414,9 +385,8 @@ function Dashboard({ onLogout }) {
         {/* ===== Tasks Section ===== */}
         {activeSection === "tasks" && <TasksManager supervisors={supervisors} />}
 
-        {/* ===== Leagues & Teams Sections ===== */}
+        {/* ===== League Section ===== */}
         {activeSection === "league" && <FootballLeague supervisors={supervisors} />}
-        {activeSection === "teams" && <TeamManager groups={supervisors} students={students} />}
 
         {/* ===== Star Section ===== */}
         {activeSection === "star" && <LeagueStarManager />}
