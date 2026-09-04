@@ -446,6 +446,27 @@ async def bulk_add_points(data: BulkPointsUpdate):
     
     return {"success": True, "count": len(students)}
 
+@api_router.put("/students/reset-points")
+async def reset_all_points():
+    students = await db.students.find({}, {"_id": 0, "id": 1, "points": 1}).to_list(10000)
+
+    await db.students.update_many({}, {"$set": {"points": 0}})
+
+    log_entries = [
+        {
+            "id": str(uuid.uuid4()),
+            "student_id": student["id"],
+            "points": -student.get("points", 0),
+            "reason": "تصفير جميع النقاط",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        for student in students if student.get("points", 0) != 0
+    ]
+    if log_entries:
+        await db.points_log.insert_many(log_entries)
+
+    return {"success": True, "count": len(students)}
+
 @api_router.post("/students/{student_id}/upload-image")
 async def upload_image(student_id: str, file: UploadFile = File(...)):
     content = await file.read()

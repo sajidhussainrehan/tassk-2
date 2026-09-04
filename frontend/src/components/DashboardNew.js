@@ -167,6 +167,19 @@ function Dashboard({ onLogout }) {
     } finally { setLoading(false); }
   };
 
+  const resetAllPoints = async () => {
+    if (!window.confirm("⚠️ سيتم تصفير نقاط جميع الطلاب إلى صفر. هذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد؟")) return;
+    if (!window.confirm("تأكيد أخير: هل تريد فعلاً تصفير نقاط جميع الطلاب؟")) return;
+    setLoading(true);
+    try {
+      await axios.put(`${API}/students/reset-points`, {}, { headers });
+      showMsg("تم تصفير نقاط جميع الطلاب");
+      await fetchStudents();
+    } catch {
+      showMsg("خطأ في تصفير النقاط");
+    } finally { setLoading(false); }
+  };
+
   const uploadImage = async (studentId, file) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -260,6 +273,7 @@ function Dashboard({ onLogout }) {
               <button onClick={() => setShowTeacherManagement(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold">👨‍🏫 إدارة المعلمين</button>
               <button onClick={() => setShowQRModal(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold" data-testid="qr-codes-btn">📱 رموز QR</button>
               <button onClick={() => setShowBulkPoints(true)} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-bold" data-testid="bulk-points-btn">💎 نقاط جماعية</button>
+              <button onClick={resetAllPoints} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold" data-testid="reset-points-btn">🔄 تصفير جميع النقاط</button>
             </div>
 
             {/* Stats */}
