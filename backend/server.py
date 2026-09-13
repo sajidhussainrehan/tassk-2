@@ -495,7 +495,16 @@ async def create_group(data: GroupCreate):
 
 @api_router.put("/groups/{group_id}", response_model=Group)
 async def update_group(group_id: str, data: GroupCreate):
+    existing = await db.groups.find_one({"id": group_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="غير موجود")
+
+    old_name = existing.get("name")
     await db.groups.update_one({"id": group_id}, {"$set": {"name": data.name}})
+
+    if old_name and old_name != data.name:
+        await db.students.update_many({"supervisor": old_name}, {"$set": {"supervisor": data.name}})
+
     updated = await db.groups.find_one({"id": group_id}, {"_id": 0})
     return updated
 
