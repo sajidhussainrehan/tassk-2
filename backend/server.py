@@ -5,7 +5,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import base64
+import io
 from pathlib import Path
+from PIL import Image
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
@@ -431,19 +433,24 @@ async def add_points(student_id: str, data: PointsUpdate):
 
 @api_router.put("/students/bulk-points")
 async def bulk_add_points(data: BulkPointsUpdate):
-    students = await db.students.find({"supervisor": data.group}, {"_id": 0}).to_list(1000)
-    
-    for student in students:
-        await db.students.update_one({"id": student["id"]}, {"$inc": {"points": data.points}})
-        log_entry = {
-            "id": str(uuid.uuid4()),
-            "student_id": student["id"],
-            "points": data.points,
-            "reason": data.reason,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.points_log.insert_one(log_entry)
-    
+    students = await db.students.find({"supervisor": data.group}, {"_id": 0, "id": 1}).to_list(1000)
+    student_ids = [s["id"] for s in students]
+
+    if student_ids:
+        await db.students.update_many({"id": {"$in": student_ids}}, {"$inc": {"points": data.points}})
+        now_iso = datetime.now(timezone.utc).isoformat()
+        log_entries = [
+            {
+                "id": str(uuid.uuid4()),
+                "student_id": sid,
+                "points": data.points,
+                "reason": data.reason,
+                "created_at": now_iso
+            }
+            for sid in student_ids
+        ]
+        await db.points_log.insert_many(log_entries)
+
     return {"success": True, "count": len(students)}
 
 @api_router.put("/students/reset-points")
@@ -467,12 +474,27 @@ async def reset_all_points():
 
     return {"success": True, "count": len(students)}
 
+MAX_IMAGE_DIMENSION = 800
+IMAGE_JPEG_QUALITY = 78
+
 @api_router.post("/students/{student_id}/upload-image")
 async def upload_image(student_id: str, file: UploadFile = File(...)):
     content = await file.read()
-    image_base64 = base64.b64encode(content).decode()
-    
-    await db.students.update_one({"id": student_id}, {"$set": {"image_url": f"data:{file.content_type};base64,{image_base64}"}})
+
+    try:
+        img = Image.open(io.BytesIO(content))
+        img = img.convert("RGB")
+        img.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION), Image.LANCZOS)
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=IMAGE_JPEG_QUALITY, optimize=True)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode()
+        content_type = "image/jpeg"
+    except Exception:
+        # Not a decodable image (corrupt upload) - store the original bytes as a fallback
+        image_base64 = base64.b64encode(content).decode()
+        content_type = file.content_type
+
+    await db.students.update_one({"id": student_id}, {"$set": {"image_url": f"data:{content_type};base64,{image_base64}"}})
     return {"success": True}
 
 # ==================== Groups Endpoints ====================
@@ -1294,11 +1316,14 @@ async def finalize_attendance_session(session_id: str):
     scanned_records = await db.attendance_records.find({"session_id": session_id}, {"_id": 0}).to_list(1000)
     scanned_student_ids = {r["student_id"] for r in scanned_records}
     
-    absent_count = 0
     # Process absent students
-    for student in all_students:
-        if student["id"] not in scanned_student_ids:
-            # Create absent record
+    absent_students = [s for s in all_students if s["id"] not in scanned_student_ids]
+
+    if absent_students:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        absent_records = []
+        log_entries = []
+        for student in absent_students:
             absent_record = AttendanceRecord(
                 session_id=session_id,
                 student_id=student["id"],
@@ -1310,21 +1335,23 @@ async def finalize_attendance_session(session_id: str):
             )
             doc = absent_record.model_dump()
             doc["scanned_at"] = doc["scanned_at"].isoformat()
-            await db.attendance_records.insert_one(doc)
-            
-            # Deduct points
-            await db.students.update_one({"id": student["id"]}, {"$inc": {"points": -30}})
-            
-            # Log points
-            log_entry = {
+            absent_records.append(doc)
+            log_entries.append({
                 "id": str(uuid.uuid4()),
                 "student_id": student["id"],
                 "points": -30,
                 "reason": "غياب",
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }
-            await db.points_log.insert_one(log_entry)
-            absent_count += 1
+                "created_at": now_iso
+            })
+
+        await db.attendance_records.insert_many(absent_records)
+        await db.students.update_many(
+            {"id": {"$in": [s["id"] for s in absent_students]}},
+            {"$inc": {"points": -30}}
+        )
+        await db.points_log.insert_many(log_entries)
+
+    absent_count = len(absent_students)
     
     # Mark session as finalized
     await db.attendance_sessions.update_one(
@@ -1380,6 +1407,19 @@ app.add_middleware(
 )
 
 logging.basicConfig(level=logging.INFO)
+
+@app.on_event("startup")
+async def create_indexes():
+    await db.students.create_index("id", unique=True)
+    await db.students.create_index("supervisor")
+    await db.students.create_index("teacher")
+    await db.points_log.create_index("student_id")
+    await db.groups.create_index("id", unique=True)
+    await db.teachers.create_index("id", unique=True)
+    await db.tasks.create_index("group")
+    await db.attendance_records.create_index("session_id")
+    await db.attendance_sessions.create_index("date")
+    await db.halaqa_grades.create_index("student_id")
 
 @app.on_event("shutdown")
 async def shutdown():
