@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { resolveImageUrl } from "../lib/utils";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -71,7 +72,7 @@ function LeagueStarManager() {
           <div className="text-4xl mb-2">&#9733;</div>
           <h3 className="text-sm opacity-80">نجم الدوري الحالي</h3>
           {(currentStar.image_url || currentStar.image) ? (
-            <img src={currentStar.image_url || currentStar.image} alt="" className="w-20 h-20 rounded-full object-cover border-4 border-white/40 mx-auto mt-2 shadow-lg" />
+            <img src={resolveImageUrl(currentStar.image_url || currentStar.image)} alt="" className="w-20 h-20 rounded-full object-cover border-4 border-white/40 mx-auto mt-2 shadow-lg" />
           ) : (
             <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold mx-auto mt-2">{currentStar.student_name?.charAt(0)}</div>
           )}
@@ -96,7 +97,7 @@ function LeagueStarManager() {
             <div key={s.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
               <div className="flex items-center gap-3">
                 {s.image_url ? (
-                  <img src={s.image_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  <img src={resolveImageUrl(s.image_url)} alt="" className="w-8 h-8 rounded-full object-cover" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-sm font-bold text-amber-700">{s.student_name?.charAt(0)}</div>
                 )}
@@ -130,7 +131,7 @@ function LeagueStarManager() {
               {selectedStudentData && (
                 <div className="flex items-center gap-3 bg-amber-50 p-3 rounded-lg border border-amber-200">
                   {selectedStudentData.image_url ? (
-                    <img src={selectedStudentData.image_url} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-amber-400" />
+                    <img src={resolveImageUrl(selectedStudentData.image_url)} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-amber-400" />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-amber-200 flex items-center justify-center font-bold text-amber-700">{selectedStudentData.name.charAt(0)}</div>
                   )}

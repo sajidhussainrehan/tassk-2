@@ -11,6 +11,7 @@ import GroupsManager from "./GroupsManager";
 import QuduratManager from "./QuduratManager";
 import AttendanceManager from "./AttendanceManager";
 import TeacherManagement from "./TeacherManagement";
+import { resolveImageUrl } from "../lib/utils";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -231,7 +232,7 @@ function Dashboard({ onLogout }) {
         <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white py-3 px-4">
           <div className="container mx-auto flex items-center justify-center gap-3 text-center">
             <span className="text-xl">⭐</span>
-            {leagueStar.image_url && <img src={leagueStar.image_url} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white/40" />}
+            {leagueStar.image_url && <img src={resolveImageUrl(leagueStar.image_url)} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white/40" />}
             <span className="font-bold">نجم الدوري: {leagueStar.student_name}</span>
             <span className="text-yellow-100 text-sm">✨ {leagueStar.reason}</span>
           </div>
@@ -320,7 +321,7 @@ function Dashboard({ onLogout }) {
                         {/* Image */}
                         <div className="relative">
                           {student.image_url ? (
-                            <img src={student.image_url} alt="" className={`w-10 h-10 rounded-full object-cover border-2 ${color.border}`} />
+                            <img src={resolveImageUrl(student.image_url)} alt="" className={`w-10 h-10 rounded-full object-cover border-2 ${color.border}`} />
                           ) : (
                             <div className={`w-10 h-10 rounded-full ${color.bg} ${color.text} flex items-center justify-center font-bold`}>
                               {student.name.charAt(0)}

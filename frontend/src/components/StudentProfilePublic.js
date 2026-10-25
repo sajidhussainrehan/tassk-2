@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import RamadanQuiz from "./RamadanQuiz";
 import QuduratStudent from "./QuduratStudent";
+import { resolveImageUrl } from "../lib/utils";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -47,29 +48,22 @@ function StudentProfileContent({ setRenderError }) {
 
   const fetchData = useCallback(async () => {
     try {
-      const [profileRes, starRes, challengesRes, standingsRes] = await Promise.all([
+      const [profileRes, starRes, challengesRes, standingsRes, logRes] = await Promise.all([
         axios.get(`${API}/students/${studentId}/profile`),
         axios.get(`${API}/league-star`),
         axios.get(`${API}/challenges/active`),
-        axios.get(`${API}/league-standings`)
+        axios.get(`${API}/league-standings`),
+        axios.get(`${API}/points-log/${studentId}`)
       ]);
       setStudent(profileRes.data.student);
       setRank(profileRes.data.rank);
       setTotalStudents(profileRes.data.total_students);
+      setGroupRank(profileRes.data.group_rank);
+      setGroupSize(profileRes.data.group_size || 0);
       setLeagueStar(starRes.data);
       setChallenges(challengesRes.data);
       setStandings(standingsRes.data);
-
-      // Fetch all students to calculate group rank
-      const allStudentsRes = await axios.get(`${API}/students`);
-      const allStudents = allStudentsRes.data;
-      const studentGroup = profileRes.data.student.supervisor;
-      if (studentGroup) {
-        const groupStudents = allStudents.filter(s => s.supervisor === studentGroup).sort((a, b) => b.points - a.points);
-        const grpRank = groupStudents.findIndex(s => s.id === studentId) + 1;
-        setGroupRank(grpRank);
-        setGroupSize(groupStudents.length);
-      }
+      setPointsLog(logRes.data);
 
       // Fetch tasks for student's group
       const group = profileRes.data.student.supervisor;
@@ -77,10 +71,6 @@ function StudentProfileContent({ setRenderError }) {
         const tasksRes = await axios.get(`${API}/tasks?group=${encodeURIComponent(group)}`);
         setTasks(tasksRes.data?.filter(t => !t.completed && (!t.claimed_by || t.claimed_by === studentId)) || []);
       }
-
-      // Fetch points log
-      const logRes = await axios.get(`${API}/points-log/${studentId}`);
-      setPointsLog(logRes.data);
     } catch (err) {
       console.error("StudentProfilePublic fetch error:", err);
       setError("حدث خطأ في جلب البيانات");
@@ -146,7 +136,7 @@ function StudentProfileContent({ setRenderError }) {
         <h1 className="text-center text-lg font-bold mb-6">🌱 نادي غِراس</h1>
         <div className="flex flex-col items-center">
           {student.image_url ? (
-            <img src={student.image_url} alt="" className="w-24 h-24 rounded-full object-cover border-4 border-white/30 shadow-lg" />
+            <img src={resolveImageUrl(student.image_url)} alt="" className="w-24 h-24 rounded-full object-cover border-4 border-white/30 shadow-lg" />
           ) : (
             <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-4xl font-bold shadow-lg">{(student.name || '?').charAt(0)}</div>
           )}
@@ -169,7 +159,7 @@ function StudentProfileContent({ setRenderError }) {
             <p className="text-3xl">⭐</p>
             <p className="text-sm opacity-80">نجم الدوري</p>
             {leagueStar.image_url ? (
-              <img src={leagueStar.image_url} alt="" className="w-16 h-16 rounded-full object-cover border-4 border-white/40 mx-auto mt-1 shadow-lg" />
+              <img src={resolveImageUrl(leagueStar.image_url)} alt="" className="w-16 h-16 rounded-full object-cover border-4 border-white/40 mx-auto mt-1 shadow-lg" />
             ) : (
               <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold mx-auto mt-1">{(leagueStar.student_name || '?').charAt(0)}</div>
             )}

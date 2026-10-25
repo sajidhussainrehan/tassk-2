@@ -6,42 +6,48 @@ export const GlobalLoader = () => {
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
-        let timer;
-        
-        // Intercept requests
-        const requestInterceptor = axios.interceptors.request.use((config) => {
+        // Several requests often run in parallel: count them and keep a single timer,
+        // so the bar only finishes when the last one completes.
+        let pending = 0;
+        let timer = null;
+        let hideTimeout = null;
+
+        const start = () => {
+            pending += 1;
+            if (pending > 1) return;
+            clearTimeout(hideTimeout);
             setLoading(true);
             setProgress(15);
-            
             // Advance progress slowly
             timer = setInterval(() => {
-                setProgress((prev) => {
-                    if (prev >= 90) return 90;
-                    return prev + 2;
-                });
+                setProgress((prev) => (prev >= 90 ? 90 : prev + 2));
             }, 300);
-            
+        };
+
+        const finish = () => {
+            pending = Math.max(0, pending - 1);
+            if (pending > 0) return;
+            clearInterval(timer);
+            timer = null;
+            setProgress(100);
+            hideTimeout = setTimeout(() => {
+                setLoading(false);
+                setProgress(0);
+            }, 400);
+        };
+
+        const requestInterceptor = axios.interceptors.request.use((config) => {
+            start();
             return config;
         });
 
-        // Intercept responses
         const responseInterceptor = axios.interceptors.response.use(
             (response) => {
-                clearInterval(timer);
-                setProgress(100);
-                setTimeout(() => {
-                    setLoading(false);
-                    setProgress(0);
-                }, 400);
+                finish();
                 return response;
             },
             (error) => {
-                clearInterval(timer);
-                setProgress(100);
-                setTimeout(() => {
-                    setLoading(false);
-                    setProgress(0);
-                }, 400);
+                finish();
                 return Promise.reject(error);
             }
         );
@@ -50,6 +56,7 @@ export const GlobalLoader = () => {
             axios.interceptors.request.eject(requestInterceptor);
             axios.interceptors.response.eject(responseInterceptor);
             clearInterval(timer);
+            clearTimeout(hideTimeout);
         };
     }, []);
 

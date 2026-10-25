@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { resolveImageUrl } from "../lib/utils";
 
 // Point options configuration
 const POSITIVE_POINTS = [
@@ -44,7 +45,7 @@ function PointsModal({ student, onClose, onUpdatePoints, loading }) {
           <div className="flex items-center gap-4">
             {student.image_url ? (
               <img
-                src={student.image_url}
+                src={resolveImageUrl(student.image_url)}
                 alt={student.name}
                 className="w-16 h-16 rounded-full object-cover border-4 border-white/30"
               />

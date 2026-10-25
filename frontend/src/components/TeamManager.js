@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { resolveImageUrl } from "../lib/utils";
 
 const API_BASE = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
 const API = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
@@ -126,7 +127,7 @@ function TeamManager({ groups, students }) {
             <div className="space-y-2">
               <label className="block text-sm font-bold text-gray-700">الصورة الجماعية للفريق</label>
               {teamData.group_photo && (
-                <img src={teamData.group_photo} alt="Team" className="w-full aspect-video object-cover rounded-xl shadow-md border-2 border-emerald-500 mb-2" />
+                <img src={resolveImageUrl(teamData.group_photo)} alt="Team" className="w-full aspect-video object-cover rounded-xl shadow-md border-2 border-emerald-500 mb-2" />
               )}
               <input type="file" onChange={handlePhotoUpload} className="hidden" id="team-photo-input" accept="image/*" />
               <label htmlFor="team-photo-input" className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl cursor-pointer font-bold border-2 border-dashed border-gray-300 transition-colors">

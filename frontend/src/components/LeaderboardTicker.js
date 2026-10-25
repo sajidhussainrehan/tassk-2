@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { resolveImageUrl } from "../lib/utils";
 
 function LeaderboardTicker({ students }) {
   const tickerRef = useRef(null);
@@ -74,7 +75,7 @@ function LeaderboardTicker({ students }) {
               <div className="relative">
                 {top3[1].image_url ? (
                   <img
-                    src={top3[1].image_url}
+                    src={resolveImageUrl(top3[1].image_url)}
                     alt={top3[1].name}
                     className="w-16 h-16 rounded-full object-cover border-4 border-gray-300"
                   />
@@ -103,7 +104,7 @@ function LeaderboardTicker({ students }) {
               <div className="relative">
                 {top3[0].image_url ? (
                   <img
-                    src={top3[0].image_url}
+                    src={resolveImageUrl(top3[0].image_url)}
                     alt={top3[0].name}
                     className="w-20 h-20 rounded-full object-cover border-4 border-yellow-400"
                   />
@@ -132,7 +133,7 @@ function LeaderboardTicker({ students }) {
               <div className="relative">
                 {top3[2].image_url ? (
                   <img
-                    src={top3[2].image_url}
+                    src={resolveImageUrl(top3[2].image_url)}
                     alt={top3[2].name}
                     className="w-14 h-14 rounded-full object-cover border-4 border-orange-400"
                   />
@@ -191,7 +192,7 @@ function LeaderboardTicker({ students }) {
                   {/* Student Image */}
                   {student.image_url ? (
                     <img
-                      src={student.image_url}
+                      src={resolveImageUrl(student.image_url)}
                       alt={student.name}
                       className="w-10 h-10 rounded-full object-cover border-2 border-white/50"
                     />

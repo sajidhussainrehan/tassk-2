@@ -13,11 +13,7 @@ function ChallengesStudent({ studentId, studentName }) {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [challengesRes, answeredRes] = await Promise.all([
-                    axios.get(`${API}/challenges`),
-                    axios.get(`${API}/students/${studentId}/points-log`)
-                ]);
-                
+                const challengesRes = await axios.get(`${API}/challenges`);
                 setChallenges(challengesRes.data || []);
             } catch (err) {
                 console.error("Error fetching student challenges:", err);

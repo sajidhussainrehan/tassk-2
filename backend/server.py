@@ -1,8 +1,10 @@
-from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile, Query
+from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile, Query, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import asyncio
 import logging
 import base64
 import io
@@ -29,6 +31,92 @@ db = client[os.environ.get("DB_NAME")]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+
+# ==================== Images ====================
+# Images live in their own `images` collection and are served by URL
+# (/api/images/{id}). They must NOT be embedded as base64 in student/team
+# documents: list endpoints would then ship every photo inline on every request.
+
+MAX_IMAGE_DIMENSION = 800
+IMAGE_JPEG_QUALITY = 78
+IMAGE_URL_PREFIX = "/api/images/"
+
+def _compress_image(raw: bytes, fallback_type: Optional[str]):
+    try:
+        img = Image.open(io.BytesIO(raw))
+        img = img.convert("RGB")
+        img.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION), Image.LANCZOS)
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=IMAGE_JPEG_QUALITY, optimize=True)
+        return buffer.getvalue(), "image/jpeg"
+    except Exception:
+        # Not a decodable image - keep the original bytes
+        return raw, fallback_type or "application/octet-stream"
+
+async def store_image(raw: bytes, content_type: Optional[str]) -> str:
+    """Compress and save an image, returning its URL path."""
+    data, ctype = await asyncio.to_thread(_compress_image, raw, content_type)
+    image_id = str(uuid.uuid4())
+    await db.images.insert_one({
+        "id": image_id,
+        "data": data,
+        "content_type": ctype,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return f"{IMAGE_URL_PREFIX}{image_id}"
+
+async def delete_image_if_unused(url: Optional[str]):
+    """Delete a stored image once nothing references its URL any more."""
+    if not url or not url.startswith(IMAGE_URL_PREFIX):
+        return
+    for collection, field in (("students", "image_url"), ("league_star", "image_url"), ("teams", "group_photo")):
+        if await db[collection].find_one({field: url}, {"_id": 1}):
+            return
+    await db.images.delete_one({"id": url[len(IMAGE_URL_PREFIX):]})
+
+def _decode_data_uri(data_uri: str):
+    header, b64data = data_uri.split(",", 1)
+    content_type = header[len("data:"):].split(";")[0] or None
+    return base64.b64decode(b64data), content_type
+
+async def migrate_inline_images(collection_name: str, field: str):
+    """One-time move of base64 data URIs out of documents into the images collection."""
+    collection = db[collection_name]
+    docs = await collection.find({field: {"$regex": "^data:"}}, {"_id": 1}).to_list(None)
+    for doc in docs:
+        full = await collection.find_one({"_id": doc["_id"]}, {field: 1})
+        value = (full or {}).get(field)
+        if not isinstance(value, str) or not value.startswith("data:"):
+            continue
+        try:
+            raw, content_type = _decode_data_uri(value)
+        except Exception:
+            logging.warning("Skipping undecodable image in %s %s", collection_name, doc["_id"])
+            continue
+        url = await store_image(raw, content_type)
+        await collection.update_one({"_id": doc["_id"]}, {"$set": {field: url}})
+    if docs:
+        logging.info("Migrated %d inline image(s) in %s.%s", len(docs), collection_name, field)
+
+async def migrate_all_inline_images():
+    try:
+        await migrate_inline_images("students", "image_url")
+        await migrate_inline_images("league_star", "image_url")
+        await migrate_inline_images("teams", "group_photo")
+    except Exception:
+        logging.exception("Inline image migration failed")
+
+@api_router.get("/images/{image_id}")
+async def get_image(image_id: str):
+    image = await db.images.find_one({"id": image_id}, {"_id": 0, "data": 1, "content_type": 1})
+    if not image:
+        raise HTTPException(status_code=404, detail="غير موجود")
+    # Each upload gets a new id, so the URL content never changes and can be cached forever
+    return Response(
+        content=image["data"],
+        media_type=image.get("content_type") or "image/jpeg",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"}
+    )
 
 # ⭐ هذا المسار مهم ليبقى السيرفر مستيقظ
 @app.get("/")
@@ -339,14 +427,6 @@ async def get_students_by_teacher(teacher_id: str):
     students.sort(key=lambda x: x["points"], reverse=True)
     return students
 
-@api_router.get("/teachers/list")
-async def get_teachers_list():
-    """Get unique names of all assigned teachers"""
-    teachers = await db.students.distinct("teacher")
-    # Filter out None or empty strings
-    teachers = [t for t in teachers if t and str(t).strip()]
-    return teachers
-
 @api_router.get("/teachers/stats")
 async def get_teacher_stats():
     """Get count of students assigned to each teacher"""
@@ -366,34 +446,30 @@ async def create_student(data: StudentCreate):
     await db.students.insert_one(doc)
     return student
 
-@api_router.get("/students/by-teacher/{teacher_id}", response_model=List[Student])
-async def get_students_by_teacher(teacher_id: str):
-    """Fetch students assigned to a specific teacher ID"""
-    students = await db.students.find({"teacher": teacher_id}, {"_id": 0}).to_list(1000)
-    return students
-
 @api_router.get("/students/{student_id}/profile")
 async def get_student_profile(student_id: str):
-    # Get all students to calculate rank
-    all_students = await db.students.find({}, {"_id": 0}).to_list(1000)
-    all_students.sort(key=lambda x: x.get("points", 0), reverse=True)
-    
-    # Find student
     student = await db.students.find_one({"id": student_id}, {"_id": 0})
     if not student:
         raise HTTPException(status_code=404, detail="غير موجود")
-    
-    # Calculate rank (1-based index)
-    rank = None
-    for i, s in enumerate(all_students):
-        if s.get("id") == student_id:
-            rank = i + 1
-            break
-    
+
+    # Rank = number of students with more points + 1 (counted in the DB, no full download)
+    points = student.get("points", 0)
+    rank = await db.students.count_documents({"points": {"$gt": points}}) + 1
+    total_students = await db.students.count_documents({})
+
+    group_rank = None
+    group_size = 0
+    group = student.get("supervisor")
+    if group:
+        group_rank = await db.students.count_documents({"supervisor": group, "points": {"$gt": points}}) + 1
+        group_size = await db.students.count_documents({"supervisor": group})
+
     return {
         "student": student,
         "rank": rank,
-        "total_students": len(all_students)
+        "total_students": total_students,
+        "group_rank": group_rank,
+        "group_size": group_size
     }
 
 @api_router.put("/students/{student_id}")
@@ -406,9 +482,11 @@ async def update_student(student_id: str, data: StudentUpdate):
 
 @api_router.delete("/students/{student_id}")
 async def delete_student(student_id: str):
+    student = await db.students.find_one({"id": student_id}, {"_id": 0, "image_url": 1})
     result = await db.students.delete_one({"id": student_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="غير موجود")
+    await delete_image_if_unused((student or {}).get("image_url"))
     return {"deleted": True}
 
 @api_router.put("/students/{student_id}/points")
@@ -474,28 +552,16 @@ async def reset_all_points():
 
     return {"success": True, "count": len(students)}
 
-MAX_IMAGE_DIMENSION = 800
-IMAGE_JPEG_QUALITY = 78
-
 @api_router.post("/students/{student_id}/upload-image")
 async def upload_image(student_id: str, file: UploadFile = File(...)):
-    content = await file.read()
+    student = await db.students.find_one({"id": student_id}, {"_id": 0, "image_url": 1})
+    if not student:
+        raise HTTPException(status_code=404, detail="غير موجود")
 
-    try:
-        img = Image.open(io.BytesIO(content))
-        img = img.convert("RGB")
-        img.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION), Image.LANCZOS)
-        buffer = io.BytesIO()
-        img.save(buffer, format="JPEG", quality=IMAGE_JPEG_QUALITY, optimize=True)
-        image_base64 = base64.b64encode(buffer.getvalue()).decode()
-        content_type = "image/jpeg"
-    except Exception:
-        # Not a decodable image (corrupt upload) - store the original bytes as a fallback
-        image_base64 = base64.b64encode(content).decode()
-        content_type = file.content_type
-
-    await db.students.update_one({"id": student_id}, {"$set": {"image_url": f"data:{content_type};base64,{image_base64}"}})
-    return {"success": True}
+    image_url = await store_image(await file.read(), file.content_type)
+    await db.students.update_one({"id": student_id}, {"$set": {"image_url": image_url}})
+    await delete_image_if_unused(student.get("image_url"))
+    return {"success": True, "image_url": image_url}
 
 # ==================== Groups Endpoints ====================
 
@@ -543,18 +609,19 @@ async def delete_group(group_id: str):
 async def get_tasks(group: Optional[str] = Query(None)):
     query = {} if group is None else {"group": group}
     tasks = await db.tasks.find(query, {"_id": 0}).to_list(1000)
+    # Old tasks only have a claims array: look up all their claimers' names in one query
+    legacy_claimers = {t["claims"][-1] for t in tasks if not t.get("claimed_by") and t.get("claims")}
+    names = {}
+    if legacy_claimers:
+        claimers = await db.students.find({"id": {"$in": list(legacy_claimers)}}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)
+        names = {s["id"]: s.get("name", "Unknown") for s in claimers}
     for t in tasks:
         if isinstance(t.get("created_at"), str):
             t["created_at"] = datetime.fromisoformat(t["created_at"])
-        # Migrate old tasks: populate claimed_by from claims array if missing
         if not t.get("claimed_by") and t.get("claims"):
-            claims = t["claims"]
-            if len(claims) > 0:
-                last_claimer = claims[-1]
-                t["claimed_by"] = last_claimer
-                # Get student name
-                student = await db.students.find_one({"id": last_claimer})
-                t["claimed_by_name"] = student.get("name", "Unknown") if student else "Unknown"
+            last_claimer = t["claims"][-1]
+            t["claimed_by"] = last_claimer
+            t["claimed_by_name"] = names.get(last_claimer, "Unknown")
     return tasks
 
 @api_router.post("/tasks", response_model=Task)
@@ -801,10 +868,53 @@ async def set_league_star(data: LeagueStarCreate):
 
 @api_router.delete("/league-star/{star_id}")
 async def delete_league_star(star_id: str):
+    star = await db.league_star.find_one({"id": star_id}, {"_id": 0, "image_url": 1})
     result = await db.league_star.delete_one({"id": star_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="غير موجود")
+    await delete_image_if_unused((star or {}).get("image_url"))
     return {"deleted": True}
+
+# ==================== Teams Endpoints ====================
+
+class TeamPlayer(BaseModel):
+    student_id: str
+    name: str
+    x: float
+    y: float
+
+class TeamUpdate(BaseModel):
+    name: str
+    group_photo: Optional[str] = ""
+    lineup: List[TeamPlayer] = []
+
+@api_router.get("/teams")
+async def get_all_teams():
+    return await db.teams.find({}, {"_id": 0}).to_list(100)
+
+@api_router.get("/teams/{group_name}")
+async def get_team(group_name: str):
+    team = await db.teams.find_one({"name": group_name}, {"_id": 0})
+    if team:
+        return team
+    return {"name": group_name, "group_photo": "", "lineup": []}
+
+@api_router.post("/teams")
+async def save_team(data: TeamUpdate):
+    existing = await db.teams.find_one({"name": data.name}, {"_id": 0, "group_photo": 1})
+    await db.teams.update_one({"name": data.name}, {"$set": data.model_dump()}, upsert=True)
+    old_photo = (existing or {}).get("group_photo")
+    if old_photo != data.group_photo:
+        await delete_image_if_unused(old_photo)
+    return {"success": True}
+
+@api_router.post("/teams/{group_name}/upload-photo")
+async def upload_team_photo(group_name: str, file: UploadFile = File(...)):
+    existing = await db.teams.find_one({"name": group_name}, {"_id": 0, "group_photo": 1})
+    image_url = await store_image(await file.read(), file.content_type)
+    await db.teams.update_one({"name": group_name}, {"$set": {"group_photo": image_url}}, upsert=True)
+    await delete_image_if_unused((existing or {}).get("group_photo"))
+    return {"image_url": image_url}
 
 # ==================== Points Log Endpoints ====================
 
@@ -1398,6 +1508,7 @@ async def health_check():
 
 app.include_router(api_router)
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -1420,6 +1531,10 @@ async def create_indexes():
     await db.attendance_records.create_index("session_id")
     await db.attendance_sessions.create_index("date")
     await db.halaqa_grades.create_index("student_id")
+    await db.images.create_index("id", unique=True)
+    await db.teams.create_index("name")
+    # Runs in the background so the API starts serving immediately
+    asyncio.create_task(migrate_all_inline_images())
 
 @app.on_event("shutdown")
 async def shutdown():
