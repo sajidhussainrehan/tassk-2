@@ -472,6 +472,52 @@ async def get_student_profile(student_id: str):
         "group_size": group_size
     }
 
+# These fixed paths must be registered before PUT /students/{student_id},
+# otherwise "bulk-points" / "reset-points" get matched as a student id.
+@api_router.put("/students/bulk-points")
+async def bulk_add_points(data: BulkPointsUpdate):
+    students = await db.students.find({"supervisor": data.group}, {"_id": 0, "id": 1}).to_list(1000)
+    student_ids = [s["id"] for s in students]
+    if not student_ids:
+        raise HTTPException(status_code=404, detail="لا يوجد طلاب في هذه المجموعة")
+
+    await db.students.update_many({"id": {"$in": student_ids}}, {"$inc": {"points": data.points}})
+    now_iso = datetime.now(timezone.utc).isoformat()
+    log_entries = [
+        {
+            "id": str(uuid.uuid4()),
+            "student_id": sid,
+            "points": data.points,
+            "reason": data.reason,
+            "created_at": now_iso
+        }
+        for sid in student_ids
+    ]
+    await db.points_log.insert_many(log_entries)
+
+    return {"success": True, "count": len(students)}
+
+@api_router.put("/students/reset-points")
+async def reset_all_points():
+    students = await db.students.find({}, {"_id": 0, "id": 1, "points": 1}).to_list(10000)
+
+    await db.students.update_many({}, {"$set": {"points": 0}})
+
+    log_entries = [
+        {
+            "id": str(uuid.uuid4()),
+            "student_id": student["id"],
+            "points": -student.get("points", 0),
+            "reason": "تصفير جميع النقاط",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        for student in students if student.get("points", 0) != 0
+    ]
+    if log_entries:
+        await db.points_log.insert_many(log_entries)
+
+    return {"success": True, "count": len(students)}
+
 @api_router.put("/students/{student_id}")
 async def update_student(student_id: str, data: StudentUpdate):
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
@@ -508,49 +554,6 @@ async def add_points(student_id: str, data: PointsUpdate):
     await db.points_log.insert_one(log_entry)
     
     return {"success": True}
-
-@api_router.put("/students/bulk-points")
-async def bulk_add_points(data: BulkPointsUpdate):
-    students = await db.students.find({"supervisor": data.group}, {"_id": 0, "id": 1}).to_list(1000)
-    student_ids = [s["id"] for s in students]
-
-    if student_ids:
-        await db.students.update_many({"id": {"$in": student_ids}}, {"$inc": {"points": data.points}})
-        now_iso = datetime.now(timezone.utc).isoformat()
-        log_entries = [
-            {
-                "id": str(uuid.uuid4()),
-                "student_id": sid,
-                "points": data.points,
-                "reason": data.reason,
-                "created_at": now_iso
-            }
-            for sid in student_ids
-        ]
-        await db.points_log.insert_many(log_entries)
-
-    return {"success": True, "count": len(students)}
-
-@api_router.put("/students/reset-points")
-async def reset_all_points():
-    students = await db.students.find({}, {"_id": 0, "id": 1, "points": 1}).to_list(10000)
-
-    await db.students.update_many({}, {"$set": {"points": 0}})
-
-    log_entries = [
-        {
-            "id": str(uuid.uuid4()),
-            "student_id": student["id"],
-            "points": -student.get("points", 0),
-            "reason": "تصفير جميع النقاط",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        for student in students if student.get("points", 0) != 0
-    ]
-    if log_entries:
-        await db.points_log.insert_many(log_entries)
-
-    return {"success": True, "count": len(students)}
 
 @api_router.post("/students/{student_id}/upload-image")
 async def upload_image(student_id: str, file: UploadFile = File(...)):
