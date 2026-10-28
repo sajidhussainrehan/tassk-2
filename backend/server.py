@@ -307,11 +307,26 @@ class Task(BaseModel):
     claims: List[str] = []
     claimed_by: Optional[str] = None
     claimed_by_name: Optional[str] = None
+    template_id: Optional[str] = None  # Set when the task was given out from the task bank
 
 class TaskCreate(BaseModel):
     group: str
     description: str
     points: int = 0
+
+class TaskTemplate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    description: str
+    points: int = 10
+    assigned_groups: List[str] = []  # Groups that already received this task - never given to them again
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TaskTemplateCreate(BaseModel):
+    description: str
+    points: int = 10
+
+class TaskAssign(BaseModel):
+    group: str
 
 class Challenge(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -595,6 +610,10 @@ async def update_group(group_id: str, data: GroupCreate):
 
     if old_name and old_name != data.name:
         await db.students.update_many({"supervisor": old_name}, {"$set": {"supervisor": data.name}})
+        # Keep task history attached to the group under its new name
+        await db.tasks.update_many({"group": old_name}, {"$set": {"group": data.name}})
+        await db.task_templates.update_many({"assigned_groups": old_name}, {"$addToSet": {"assigned_groups": data.name}})
+        await db.task_templates.update_many({"assigned_groups": old_name}, {"$pull": {"assigned_groups": old_name}})
 
     updated = await db.groups.find_one({"id": group_id}, {"_id": 0})
     return updated
@@ -688,6 +707,107 @@ async def claim_task(task_id: str, student_id: str):
 @api_router.delete("/tasks/{task_id}")
 async def delete_task(task_id: str):
     result = await db.tasks.delete_one({"id": task_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="غير موجود")
+    return {"deleted": True}
+
+# ==================== Task Bank (reusable tasks) ====================
+# Tasks are written once and given out to groups. Each template remembers which
+# groups received it (assigned_groups) so no group ever gets the same task twice.
+# Deleting a given-out task does not erase that history.
+
+async def _require_group(name: str):
+    if not await db.groups.find_one({"name": name}, {"_id": 1}):
+        raise HTTPException(status_code=404, detail="المجموعة غير موجودة")
+
+async def _assign_template(template: dict, group: str) -> Optional[Task]:
+    """Give a template to a group. Returns None if the group already received it."""
+    # Atomic check-and-mark: two clicks at once cannot both succeed
+    result = await db.task_templates.update_one(
+        {"id": template["id"], "assigned_groups": {"$ne": group}},
+        {"$addToSet": {"assigned_groups": group}}
+    )
+    if result.modified_count == 0:
+        return None
+    task = Task(group=group, description=template["description"], points=template["points"], template_id=template["id"])
+    doc = task.model_dump()
+    doc["created_at"] = doc["created_at"].isoformat()
+    await db.tasks.insert_one(doc)
+    return task
+
+async def _assign_next_template(group: str) -> Optional[Task]:
+    """Give a group the oldest bank task it has not received yet. None when it has received them all."""
+    while True:
+        template = await db.task_templates.find_one(
+            {"assigned_groups": {"$ne": group}}, {"_id": 0}, sort=[("created_at", 1)]
+        )
+        if not template:
+            return None
+        task = await _assign_template(template, group)
+        if task:
+            return task
+        # Another request assigned this one first - try the next template
+
+@api_router.get("/task-templates", response_model=List[TaskTemplate])
+async def get_task_templates():
+    templates = await db.task_templates.find({}, {"_id": 0}).sort("created_at", 1).to_list(1000)
+    for t in templates:
+        if isinstance(t.get("created_at"), str):
+            t["created_at"] = datetime.fromisoformat(t["created_at"])
+    return templates
+
+@api_router.post("/task-templates", response_model=TaskTemplate)
+async def create_task_template(data: TaskTemplateCreate):
+    template = TaskTemplate(**data.model_dump())
+    doc = template.model_dump()
+    doc["created_at"] = doc["created_at"].isoformat()
+    await db.task_templates.insert_one(doc)
+    return template
+
+@api_router.post("/task-templates/assign-next")
+async def assign_next_task_template(data: TaskAssign):
+    await _require_group(data.group)
+    task = await _assign_next_template(data.group)
+    if not task:
+        raise HTTPException(status_code=404, detail="حصلت هذه المجموعة على جميع المهام في البنك")
+    return {"success": True, "task": task}
+
+@api_router.post("/task-templates/distribute")
+async def distribute_task_templates():
+    """Give every group its next bank task it has not received yet."""
+    groups = await db.groups.find({}, {"_id": 0, "name": 1}).to_list(1000)
+    assigned, finished = [], []
+    for g in groups:
+        task = await _assign_next_template(g["name"])
+        if task:
+            assigned.append({"group": g["name"], "description": task.description})
+        else:
+            finished.append(g["name"])
+    return {"assigned": assigned, "finished_groups": finished}
+
+@api_router.post("/task-templates/{template_id}/assign")
+async def assign_task_template(template_id: str, data: TaskAssign):
+    template = await db.task_templates.find_one({"id": template_id}, {"_id": 0})
+    if not template:
+        raise HTTPException(status_code=404, detail="مهمة غير موجودة")
+    await _require_group(data.group)
+    task = await _assign_template(template, data.group)
+    if not task:
+        raise HTTPException(status_code=400, detail="حصلت هذه المجموعة على هذه المهمة مسبقاً")
+    return {"success": True, "task": task}
+
+@api_router.delete("/task-templates/{template_id}/groups/{group}")
+async def reset_task_template_group(template_id: str, group: str):
+    """Undo: allow a group to receive this task again (does not delete the task already given)."""
+    result = await db.task_templates.update_one({"id": template_id}, {"$pull": {"assigned_groups": group}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="مهمة غير موجودة")
+    return {"success": True}
+
+@api_router.delete("/task-templates/{template_id}")
+async def delete_task_template(template_id: str):
+    """Remove from the bank. Tasks already given to groups are kept."""
+    result = await db.task_templates.delete_one({"id": template_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="غير موجود")
     return {"deleted": True}
@@ -1536,6 +1656,7 @@ async def create_indexes():
     await db.halaqa_grades.create_index("student_id")
     await db.images.create_index("id", unique=True)
     await db.teams.create_index("name")
+    await db.task_templates.create_index("id", unique=True)
     # Runs in the background so the API starts serving immediately
     asyncio.create_task(migrate_all_inline_images())
 
